@@ -1,6 +1,8 @@
 # GPU pod overrides (deep-merged over factory.yaml): `factory build --config config/pod.yaml …`
 tts:
-  engine: qwen
+  # production narrator: CosyVoice 3 cloning the owner's own voice (assets/voices/narrator_ru.*,
+  # gitignored). Stress marks are stripped: acute/uppercase marking sounded unnatural (2026-11-15 test).
+  engine: cosyvoice
 
 captions:
   whisper_model: large-v3   # better word timestamps + stricter TTS QA; fp16 on the GPU
