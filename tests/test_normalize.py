@@ -53,6 +53,7 @@ def test_units(num, unit, expected):
 def test_spell_number():
     assert nb.spell_number("-0,25")[0] == "минус ноль целых двадцать пять сотых"
     assert nb.spell_number("80")[0] == "восемьдесят"
+    assert nb.spell_number("1200")[0] == "тысяча двести"
     assert nb.spell_fraction(3, 4) == "три четвёртых"
     assert nb.spell_fraction(21, 100) == "двадцать одна сотая"
 

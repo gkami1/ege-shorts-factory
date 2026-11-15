@@ -44,7 +44,8 @@ tts:
     voice: assets/voices/narrator_ru
     speed: 1.0
     seed: 1234
-    text_frontend: false  # its zh/en text normalizer; our normalizer already did the work
+    text_frontend: false
+    model_dir: null      # null → $COSYVOICE_MODEL_DIR (base model); a fine-tuned narrator dir from tools/cosyvoice_finetune.sh  # its zh/en text normalizer; our normalizer already did the work
   silero:
     model_url: https://models.silero.ai/models/tts/ru/v4_ru.pt
     speaker: aidar      # aidar | baya | kseniya | xenia | eugene

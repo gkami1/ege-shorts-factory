@@ -203,7 +203,10 @@ def plural_form(n: int) -> int:
 
 def spell_int(n: int, gender: str = "m") -> str:
     s = "минус " if n < 0 else ""
-    return s + _n2w(abs(n), gender=gender)
+    words = _n2w(abs(n), gender=gender)
+    if words.startswith("одна тысяча"):  # spoken Russian: «тысяча двести», not «одна тысяча двести»
+        words = words[len("одна "):]
+    return s + words
 
 
 _ORD_FEM = {2: ("вторая", "вторых"), 3: ("третья", "третьих"), 4: ("четвёртая", "четвёртых"), 5: ("пятая", "пятых"),

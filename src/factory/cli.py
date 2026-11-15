@@ -156,6 +156,26 @@ def voice_import(
     _hard_exit(0)
 
 
+@app.command("voice-dataset")
+def voice_dataset(
+    sessions: list[Path],
+    out: Path = typer.Option(Path("work/voice_dataset"), "--out"),
+    script: Path = typer.Option(Path("assets/voices/script/reading_script.txt"), "--script"),
+    config: Optional[Path] = typer.Option(None, "--config"),
+    max_cer: float = typer.Option(0.12, "--max-cer"),
+):
+    """Recorded reading sessions (in script order) → per-line clips for fine-tuning (kaldi-style dir)."""
+    from .speech.dataset import build_dataset
+
+    cfg = load_config(config)
+    rep = build_dataset(sessions, script, out, cfg, max_cer=max_cer)
+    typer.echo(f"{rep['clips']}/{rep['lines']} lines, {rep['minutes']} min of speech → {out}")
+    if rep["missing_lines"]:
+        typer.echo(f"missing lines ({len(rep['missing_lines'])}): {' '.join(rep['missing_lines'][:60])}"
+                   + (" …" if len(rep["missing_lines"]) > 60 else ""))
+    _hard_exit(0)
+
+
 @app.command("tts-bakeoff")
 def tts_bakeoff(
     config: Optional[Path] = typer.Option(None, "--config"),
