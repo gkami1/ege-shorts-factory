@@ -14,8 +14,11 @@ export PATH=$HOME/.local/bin:$PATH
 [ -d "$CV" ] || git clone -q --recursive https://github.com/FunAudioLLM/CosyVoice.git "$CV"
 [ -x "$CVENV/bin/python" ] || uv venv -q -p 3.10 "$CVENV"
 # Inference-only subset of requirements.txt (no deepspeed/tensorrt/gradio/servers/training).
-grep -v -E '^(deepspeed|tensorrt|gradio|fastapi|uvicorn|grpcio|tensorboard|gdown|wget|lightning|--extra-index-url)' \
+grep -v -E '^(deepspeed|tensorrt|gradio|fastapi|uvicorn|grpcio|tensorboard|gdown|wget|lightning|openai-whisper|--extra-index-url)' \
     "$CV/requirements.txt" > /tmp/cv_req.txt
+# openai-whisper 20231117's setup.py needs pkg_resources (gone from new setuptools): build it without isolation
+VIRTUAL_ENV=$CVENV uv pip install -q "setuptools<70" wheel
+VIRTUAL_ENV=$CVENV uv pip install -q --no-build-isolation openai-whisper==20231117
 VIRTUAL_ENV=$CVENV uv pip install -q --index-strategy unsafe-best-match \
     --extra-index-url https://download.pytorch.org/whl/cu121 -r /tmp/cv_req.txt huggingface_hub
 VIRTUAL_ENV=$CVENV uv pip install -q lightning==2.2.4 || true   # imported by some modules
