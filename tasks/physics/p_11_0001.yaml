@@ -1,0 +1,11 @@
+id: p_11_0001
+subject: physics
+kim_number: 11
+topic: Постоянный ток — закон Ома
+condition: 'Сопротивление резистора равно $20$ Ом, сила тока в нём $0{,}3$ А. Чему равно напряжение на резисторе?'
+answer: "6"
+answer_unit: В
+check: "20 * Rational(3, 10)"
+source: original (FIPI-style)
+tags: [закон-Ома]
+notes: KIM number to be verified against the current FIPI specification.

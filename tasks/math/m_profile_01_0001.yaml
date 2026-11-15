@@ -1,0 +1,9 @@
+id: m_profile_01_0001
+subject: math_profile
+kim_number: 1
+topic: Планиметрия — прямоугольный треугольник
+condition: 'В треугольнике $ABC$ угол $C$ равен $90^\circ$, $AB = 25$, $\sin A = 0{,}6$. Найдите $BC$.'
+answer: "15"
+check: "Rational(6, 10) * 25"
+source: original (FIPI-style)
+tags: [тригонометрия, быстрый-трюк]

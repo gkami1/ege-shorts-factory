@@ -1,0 +1,9 @@
+id: m_profile_06_0003
+subject: math_profile
+kim_number: 6
+topic: Простейшие уравнения — иррациональные
+condition: 'Найдите корень уравнения $\sqrt{2x+7} = 5$.'
+answer: "9"
+check: "(5**2 - 7) / 2"
+source: original (FIPI-style)
+tags: [корни]

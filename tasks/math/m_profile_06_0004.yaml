@@ -1,0 +1,9 @@
+id: m_profile_06_0004
+subject: math_profile
+kim_number: 6
+topic: Простейшие уравнения — логарифмические
+condition: 'Найдите корень уравнения $\log_5(4-x) = 2$.'
+answer: "-21"
+check: "4 - 5**2"
+source: original (FIPI-style)
+tags: [логарифмы]

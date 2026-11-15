@@ -1,0 +1,10 @@
+id: p_08_0001
+subject: physics
+kim_number: 8
+topic: Молекулярная физика — изобарный процесс
+condition: 'Идеальный газ при постоянном давлении нагрели от $300$ К до $450$ К. Во сколько раз увеличился объём газа?'
+answer: "1,5"
+check: "Rational(450, 300)"
+source: original (FIPI-style)
+tags: [газовые-законы]
+notes: KIM number to be verified against the current FIPI specification.

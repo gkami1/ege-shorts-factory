@@ -1,0 +1,9 @@
+id: m_profile_07_0004
+subject: math_profile
+kim_number: 7
+topic: Вычисления и преобразования — свойства степеней
+condition: 'Найдите значение выражения $\dfrac{6^{11}}{2^{9}\cdot 3^{10}}$.'
+answer: "12"
+check: "Rational(6**11, 2**9 * 3**10)"
+source: original (FIPI-style)
+tags: [степени, быстрый-трюк]

@@ -1,0 +1,9 @@
+id: m_profile_12_0001
+subject: math_profile
+kim_number: 12
+topic: Наибольшее и наименьшее значение функции
+condition: 'Найдите наименьшее значение функции $y = x^3 - 27x + 10$ на отрезке $[0;\,4]$.'
+answer: "-44"
+check: "3**3 - 27*3 + 10"
+source: original (FIPI-style)
+tags: [производная]

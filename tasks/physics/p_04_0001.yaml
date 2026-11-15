@@ -1,0 +1,9 @@
+id: p_04_0001
+subject: physics
+kim_number: 4
+topic: Механические колебания
+condition: 'Частота колебаний маятника равна $5$ Гц. Сколько полных колебаний он совершит за $8$ с?'
+answer: "40"
+check: "5 * 8"
+source: original (FIPI-style)
+notes: KIM number to be verified against the current FIPI specification.

@@ -1,0 +1,9 @@
+id: m_profile_03_0001
+subject: math_profile
+kim_number: 3
+topic: Стереометрия — куб
+condition: 'Объём куба равен 64. Найдите площадь его поверхности.'
+answer: "96"
+check: "6 * 4**2"
+source: original (FIPI-style)
+tags: [куб]

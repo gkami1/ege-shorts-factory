@@ -1,0 +1,10 @@
+id: m_base_07_0002
+subject: math_base
+kim_number: 7
+topic: Вычисления — десятичные дроби
+condition: 'Найдите значение выражения $(2{,}5 - 1{,}7)\cdot 4{,}5$.'
+answer: "3,6"
+check: "(Rational(25, 10) - Rational(17, 10)) * Rational(45, 10)"
+source: original (FIPI-style)
+tags: [дроби]
+notes: KIM number for базовый уровень to be verified against the current FIPI specification.
