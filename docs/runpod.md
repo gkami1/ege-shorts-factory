@@ -80,3 +80,17 @@ scp -P <port> root@<ip>:/root/ege-shorts-factory/assets/voices/narrator_ru.* ass
 Alternatively, use JupyterLab's file browser → right-click → Download.
 **Stop** the pod when done (billing stops for the GPU; the volume is billed at storage rates).
 After a restart, run `bash tools/pod_setup.sh` again: apt packages are on the container disk.
+
+## 7. Scripts from the LLM (M3)
+
+The LLM needs most of the 48 GB GPU, so write the scripts first, stop the server, then build the videos.
+
+```bash
+bash tools/llm_serve.sh                       # vLLM in /opt/vllm-venv; Qwen3.6-35B-A3B, FP8; first run downloads ~70 GB
+factory llm-eval                              # accuracy on the bank (5 samples per task) → work/llm/eval_*.json
+MODEL=Qwen/Qwen3.6-27B bash tools/llm_serve.sh  # compare a second candidate (set llm.model to match)
+factory write                                 # every task without a script: solve ×5 → JSON → verify (+2 repairs)
+#   pass → video_scripts/<id>.json   fail → review/<id>/REASONS.md   raw model I/O → work/llm/<id>/
+bash tools/llm_serve.sh stop
+factory batch video_scripts/*.json --config config/pod.yaml
+```
