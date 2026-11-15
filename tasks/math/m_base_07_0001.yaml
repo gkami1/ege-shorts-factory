@@ -1,0 +1,9 @@
+id: m_base_07_0001
+subject: math_base
+kim_number: 7
+topic: Вычисления — дроби
+condition: 'Найдите значение выражения $\dfrac{1}{4} + 0{,}35$.'
+answer: "0,6"
+check: "Rational(1, 4) + Rational(35, 100)"
+source: original (FIPI-style)
+notes: KIM number for базовый уровень to be verified against the current FIPI specification.

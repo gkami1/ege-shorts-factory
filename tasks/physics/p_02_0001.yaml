@@ -1,0 +1,9 @@
+id: p_02_0001
+subject: physics
+kim_number: 2
+topic: Динамика — второй закон Ньютона
+condition: 'На тело массой $3$ кг действует равнодействующая сила $12$ Н. С каким ускорением движется тело?'
+answer: "4"
+answer_unit: м/с²
+check: "12 / 3"
+source: original (FIPI-style)

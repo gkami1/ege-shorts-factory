@@ -1,0 +1,9 @@
+id: p_01_0001
+subject: physics
+kim_number: 1
+topic: Кинематика — равноускоренное движение
+condition: 'Координата тела меняется по закону $x(t) = 5 + 2t + 3t^2$ (все величины в СИ). Чему равна проекция скорости тела на ось $Ox$ в момент $t = 2$ с?'
+answer: "14"
+answer_unit: м/с
+check: "diff(5 + 2*t + 3*t**2, t).subs(t, 2)"
+source: original (FIPI-style)

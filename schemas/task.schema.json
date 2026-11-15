@@ -1,0 +1,132 @@
+{
+  "additionalProperties": false,
+  "description": "One exam task in the bank (tasks/**/*.yaml).",
+  "properties": {
+    "id": {
+      "description": "<subject prefix>_<KIM number, 2 digits>_<serial, 4 digits>, e.g. m_profile_07_0001",
+      "pattern": "^(m_profile|m_base|p)_\\d{2}_\\d{4}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "subject": {
+      "enum": [
+        "math_profile",
+        "math_base",
+        "physics"
+      ],
+      "title": "Subject",
+      "type": "string"
+    },
+    "exam_part": {
+      "const": 1,
+      "default": 1,
+      "title": "Exam Part",
+      "type": "integer"
+    },
+    "kim_number": {
+      "description": "Task number in the КИМ",
+      "maximum": 30,
+      "minimum": 1,
+      "title": "Kim Number",
+      "type": "integer"
+    },
+    "topic": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Topic"
+    },
+    "condition": {
+      "description": "Condition in Russian; inline math as $...$ (LaTeX). Rendered verbatim on the exam sheet.",
+      "minLength": 10,
+      "title": "Condition",
+      "type": "string"
+    },
+    "image": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional path to a figure, relative to the task file",
+      "title": "Image"
+    },
+    "answer": {
+      "description": "Official answer as written in the blank: '80', '-0,25'",
+      "pattern": "^-?\\d+(,\\d+)?$",
+      "title": "Answer",
+      "type": "string"
+    },
+    "answer_unit": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Physics: unit the answer is expressed in, e.g. 'м/с'",
+      "title": "Answer Unit"
+    },
+    "check": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Optional SymPy expression that evaluates to the answer (machine cross-check of the bank)",
+      "title": "Check"
+    },
+    "source": {
+      "description": "Where the task comes from (FIPI bank id, book, 'original')",
+      "title": "Source",
+      "type": "string"
+    },
+    "tags": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
+    },
+    "notes": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Notes"
+    }
+  },
+  "required": [
+    "id",
+    "subject",
+    "kim_number",
+    "condition",
+    "answer",
+    "source"
+  ],
+  "title": "Task",
+  "type": "object"
+}

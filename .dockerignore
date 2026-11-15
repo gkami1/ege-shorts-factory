@@ -1,0 +1,6 @@
+.git
+out
+work
+.cache
+**/__pycache__
+media

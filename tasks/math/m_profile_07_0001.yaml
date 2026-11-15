@@ -1,0 +1,9 @@
+id: m_profile_07_0001
+subject: math_profile
+kim_number: 7
+topic: Вычисления и преобразования — свойства степеней
+condition: 'Найдите значение выражения $2^{x+3}$, если $2^x = 10$.'
+answer: "80"
+check: "10 * 2**3"
+source: original (FIPI-style)
+tags: [степени, быстрый-трюк]

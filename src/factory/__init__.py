@@ -1,0 +1,1 @@
+"""ЕГЭ shorts factory."""

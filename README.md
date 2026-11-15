@@ -1,2 +1,41 @@
 # ege-shorts-factory
-a pipeline that automatically produces vertical short videos (TikTok / YouTube Shorts / Reels, 1080x1920, 25–45 s) explaining ЕГЭ part-1 problems in Mathematics (профиль + база) and Physics. All on-screen text and voiceover are in Russian.
+
+A pipeline that automatically produces vertical short videos (TikTok / YouTube Shorts / Reels, 1080x1920, 25–45 s) explaining ЕГЭ part-1 problems in Mathematics (профиль + база) and Physics. All on-screen text and voiceover are in Russian.
+
+Everything runs locally: open-weight models only, and all visuals are rendered by code (Manim + ffmpeg).
+Design: [docs/M0_design.md](docs/M0_design.md).
+
+## Quick start (Docker; CPU is enough for rendering)
+
+```bash
+docker build -t ege-factory .                      # CPU image (local look-dev)
+# GPU pod:
+# docker build -t ege-factory:gpu --build-arg BASE_IMAGE=nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04 \
+#   --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128 .
+
+docker run --rm -v "$PWD:/app" -v ege-cache:/cache ege-factory factory validate
+docker run --rm -v "$PWD:/app" -v ege-cache:/cache ege-factory factory build --task-id m_profile_07_0001
+#   → out/m_profile_07_0001.mp4 + out/m_profile_07_0001.meta.json
+docker run --rm -v "$PWD:/app" -v ege-cache:/cache ege-factory factory build --task-id m_profile_07_0001 --draft  # 540p/15fps preview
+docker run --rm -v "$PWD:/app" -v ege-cache:/cache ege-factory pytest -q
+```
+
+On Windows PowerShell use `${PWD}` instead of `$PWD`. Models (Silero, whisper) download once into the `ege-cache` volume.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `tasks/` | Task bank (YAML, one per task) |
+| `video_scripts/` | Video scripts (JSON). Hand-written for now; LLM-generated from M3 |
+| `config/factory.yaml` | All settings |
+| `src/factory/` | `bank`, `speech`, `captions`, `render`, `assemble`, `llm` (M3), `verify` (M3) |
+| `out/`, `work/` | Results, plus per-task intermediates (clips, timeline, ASS, silent render) |
+
+## Milestones
+
+- [x] M0 design · [x] M1 end-to-end from a hand-written script
+- [ ] M2 LaTeX→speech normalizer, TTS bake-off, caption styling
+- [ ] M3 local LLM scriptwriter + verification gate + review queue
+- [ ] M4 batch, variation knobs, physics templates
+- [ ] M5 batch quality report

@@ -1,0 +1,9 @@
+id: p_03_0001
+subject: physics
+kim_number: 3
+topic: Законы сохранения — кинетическая энергия
+condition: 'Тело массой $2$ кг движется со скоростью $3$ м/с. Чему равна его кинетическая энергия?'
+answer: "9"
+answer_unit: Дж
+check: "2 * 3**2 / 2"
+source: original (FIPI-style)

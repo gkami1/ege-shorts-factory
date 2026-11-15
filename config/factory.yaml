@@ -1,0 +1,54 @@
+# Single config for the whole pipeline. CLI: --config path/to/other.yaml
+paths:
+  tasks: tasks
+  scripts: video_scripts
+  out: out
+  work: work          # per-task intermediate files (audio clips, timeline, captions, silent render)
+  review: review      # scripts that failed verification land here (M3)
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  crf: 18
+  preset: medium
+
+timing:                 # seconds
+  pad_before: 0.08      # silence before each clip inside its segment
+  pad_after: 0.22       # hold after each clip
+  min_segment: 1.2
+  outro_hold: 1.0       # extra static time on the outro card
+
+tts:
+  engine: silero        # pluggable: speech/tts/*.py registered by name
+  silero:
+    model_url: https://models.silero.ai/models/tts/ru/v4_ru.pt
+    speaker: aidar      # aidar | baya | kseniya | xenia | eugene
+    sample_rate: 48000
+    put_accent: true
+    put_yo: true
+    device: cpu
+
+captions:
+  aligner: whisper      # whisper | proportional
+  whisper_model: small
+  whisper_device: auto  # auto | cpu | cuda
+  max_words: 3
+  max_chars: 20
+  font: Montserrat ExtraBold
+  font_file: /usr/share/fonts/truetype/factory/Montserrat-ExtraBold.ttf
+  size: 70
+  y: 1390               # caption center, px from top (stays above the platform UI)
+  pad_x: 30
+  pad_y: 16
+  radius: 22
+
+render:
+  palette: classic      # see render/style.py
+  sheet_font: Liberation Serif
+  hand_font: Caveat     # handwriting font (OFL, Cyrillic)
+
+assemble:
+  music: null           # path to a royalty-free track, or null
+  music_volume: 0.07
+  loudnorm: true        # -14 LUFS (platform standard)

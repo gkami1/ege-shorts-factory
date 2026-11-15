@@ -1,0 +1,246 @@
+{
+  "$defs": {
+    "Answer": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "Final answer in blank form; must equal the official answer",
+          "pattern": "^-?\\d+(,\\d+)?$",
+          "title": "Value",
+          "type": "string"
+        },
+        "narration": {
+          "title": "Narration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "value",
+        "narration"
+      ],
+      "title": "Answer",
+      "type": "object"
+    },
+    "Hook": {
+      "additionalProperties": false,
+      "properties": {
+        "caption": {
+          "description": "Hand-written caption over the sheet, e.g. «Эту задачу из ЕГЭ решают за 5 секунд»",
+          "maxLength": 60,
+          "title": "Caption",
+          "type": "string"
+        },
+        "narration": {
+          "description": "Spoken hook, 1 short sentence",
+          "title": "Narration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caption",
+        "narration"
+      ],
+      "title": "Hook",
+      "type": "object"
+    },
+    "Meta": {
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "maxLength": 100,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "hashtags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Hashtags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "Meta",
+      "type": "object"
+    },
+    "Outro": {
+      "additionalProperties": false,
+      "properties": {
+        "cta": {
+          "default": "Больше разборов — в профиле",
+          "title": "Cta",
+          "type": "string"
+        },
+        "narration": {
+          "default": "Больше разборов — в профиле.",
+          "title": "Narration",
+          "type": "string"
+        }
+      },
+      "title": "Outro",
+      "type": "object"
+    },
+    "Read": {
+      "additionalProperties": false,
+      "properties": {
+        "given": {
+          "description": "Spans with the given data (yellow highlighter). Exact substring of task.condition. Must not split a $...$ formula: either a whole $...$ chunk (possibly with surrounding words) or plain text.",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 1,
+          "title": "Given",
+          "type": "array"
+        },
+        "given_narration": {
+          "title": "Given Narration",
+          "type": "string"
+        },
+        "target": {
+          "description": "Span with the quantity to find (hand-drawn circle). Exact substring of task.condition. Must not split a $...$ formula: either a whole $...$ chunk (possibly with surrounding words) or plain text.",
+          "title": "Target",
+          "type": "string"
+        },
+        "target_narration": {
+          "title": "Target Narration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "given",
+        "given_narration",
+        "target",
+        "target_narration"
+      ],
+      "title": "Read",
+      "type": "object"
+    },
+    "Step": {
+      "additionalProperties": false,
+      "properties": {
+        "tex": {
+          "description": "Display-math LaTeX of the whole expression at this step, no $ delimiters",
+          "title": "Tex",
+          "type": "string"
+        },
+        "narration": {
+          "description": "What the voice says while this step is on screen (1 sentence)",
+          "title": "Narration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tex",
+        "narration"
+      ],
+      "title": "Step",
+      "type": "object"
+    },
+    "Substitute": {
+      "additionalProperties": false,
+      "properties": {
+        "flash": {
+          "description": "Span of the known value that flashes red on the sheet. Exact substring of task.condition. Must not split a $...$ formula: either a whole $...$ chunk (possibly with surrounding words) or plain text.",
+          "title": "Flash",
+          "type": "string"
+        },
+        "tex": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Short handwritten calculation shown on the sheet, e.g. '10\\cdot 8 = 80'",
+          "title": "Tex"
+        },
+        "narration": {
+          "title": "Narration",
+          "type": "string"
+        }
+      },
+      "required": [
+        "flash",
+        "narration"
+      ],
+      "title": "Substitute",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Everything the renderer needs. Narration may contain inline $...$ math (spoken via the normalizer).",
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_id": {
+      "title": "Task Id",
+      "type": "string"
+    },
+    "hook": {
+      "$ref": "#/$defs/Hook"
+    },
+    "read": {
+      "$ref": "#/$defs/Read"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/Step"
+      },
+      "maxItems": 6,
+      "minItems": 2,
+      "title": "Steps",
+      "type": "array"
+    },
+    "substitute": {
+      "$ref": "#/$defs/Substitute"
+    },
+    "answer": {
+      "$ref": "#/$defs/Answer"
+    },
+    "outro": {
+      "$ref": "#/$defs/Outro",
+      "default": {
+        "cta": "Больше разборов — в профиле",
+        "narration": "Больше разборов — в профиле."
+      }
+    },
+    "has_short_trick": {
+      "description": "How 'shorts-worthy' the trick is; <0.5 → skip",
+      "maximum": 1,
+      "minimum": 0,
+      "title": "Has Short Trick",
+      "type": "number"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  },
+  "required": [
+    "task_id",
+    "hook",
+    "read",
+    "steps",
+    "substitute",
+    "answer",
+    "has_short_trick",
+    "meta"
+  ],
+  "title": "VideoScript",
+  "type": "object"
+}

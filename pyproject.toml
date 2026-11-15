@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ege-shorts-factory"
+version = "0.1.0"
+description = "Pipeline that turns ЕГЭ part-1 tasks into vertical explainer shorts"
+requires-python = ">=3.11"
+dependencies = [
+    "manim>=0.19,<0.20",
+    "pydantic>=2.6",
+    "pyyaml>=6",
+    "typer>=0.12",
+    "numpy>=1.26",
+    "sympy>=1.12",
+    "num2words>=0.5.13",
+    "pillow>=10,<12",  # manim 0.19 camera breaks on Pillow 12+ (fromarray mode)
+    "fonttools>=4.47",
+    "soundfile>=0.12",
+]
+# torch is installed separately (CPU or CUDA wheel index), see Dockerfile.
+
+[project.optional-dependencies]
+align = ["faster-whisper>=1.0"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+factory = "factory.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+factory = ["**/*.tex", "**/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

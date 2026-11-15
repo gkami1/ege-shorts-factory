@@ -1,0 +1,9 @@
+id: m_profile_07_0002
+subject: math_profile
+kim_number: 7
+topic: Вычисления и преобразования — свойства степеней
+condition: 'Найдите значение выражения $\dfrac{(3^{5})^{2}}{3^{8}}$.'
+answer: "9"
+check: "(3**5)**2 / 3**8"
+source: original (FIPI-style)
+tags: [степени]
