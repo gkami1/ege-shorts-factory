@@ -46,8 +46,11 @@ if [ "${FLASH_ATTN:-0}" = 1 ]; then
     MAX_JOBS=${MAX_JOBS:-8} uv pip install -q flash-attn --no-build-isolation || echo "flash-attn build failed; sdpa will be used"
 fi
 
-echo "== results on the volume: out/ work/ review/ -> $WS/factory-data/"
-for d in out work review; do
+# work/ (scratch: Manim partial movies, clips) stays local: Manim calls utime(), which network
+# volumes refuse. Only finished results go to the volume.
+if [ -L "$REPO/work" ]; then rm "$REPO/work"; mkdir -p "$REPO/work"; fi
+echo "== results on the volume: out/ review/ -> $WS/factory-data/"
+for d in out review; do
     mkdir -p "$WS/factory-data/$d"
     if [ ! -L "$REPO/$d" ]; then
         [ -d "$REPO/$d" ] && cp -a "$REPO/$d/." "$WS/factory-data/$d/" && rm -rf "${REPO:?}/$d"
