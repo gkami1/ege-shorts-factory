@@ -11,8 +11,8 @@ M2 needs **one 24 GB GPU**. M3 (the local LLM) will want 48 GB.
 | Template | **RunPod PyTorch** (any recent Ubuntu 22.04/24.04 image; the setup script brings its own Python 3.12) |
 | CUDA filter | **12.8 or newer** (PyPI torch wheels need a recent driver) |
 | Container disk | 40 GB (TeX Live + apt) |
-| Volume disk | 60 GB at `/workspace` (venv, models, outputs; kept when the pod is stopped) |
-| Exposed HTTP ports | `8888` (JupyterLab), `8000` (listening pages) |
+| Volume disk | 60 GB at `/workspace`, pod volume or network volume (models, outputs; the venv lives on the container disk) |
+| Exposed HTTP ports | `8888` (JupyterLab), `8000` (listening pages; or tunnel it: `ssh -L 8000:localhost:8000 root@<ip> -p <port>`) |
 | SSH | add your public key in RunPod → Settings → SSH keys |
 
 ## 2. Get the code onto the pod
