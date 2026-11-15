@@ -18,7 +18,7 @@ M2 needs **one 24 GB GPU**. M3 (the local LLM) will want 48 GB.
 ## 2. Get the code onto the pod
 
 ```bash
-cd /workspace
+cd /root          # local disk: git can't chmod on a network volume; results are symlinked to /workspace
 git clone https://github.com/gkami1/ege-shorts-factory.git
 cd ege-shorts-factory && git checkout m2-voice
 ```
@@ -73,8 +73,8 @@ whisper heard). `out/<id>.meta.json` records the voice and `commercial_ok`.
 
 ```bash
 # on your PC (Git Bash):
-scp -P <port> -r root@<ip>:/workspace/ege-shorts-factory/out ./out-pod
-scp -P <port> root@<ip>:/workspace/ege-shorts-factory/assets/voices/narrator_ru.* assets/voices/
+scp -P <port> -r root@<ip>:/workspace/factory-data/out ./out-pod
+scp -P <port> root@<ip>:/root/ege-shorts-factory/assets/voices/narrator_ru.* assets/voices/
 ```
 
 Alternatively, use JupyterLab's file browser → right-click → Download.

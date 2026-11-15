@@ -2,7 +2,9 @@
 # One-shot setup on a RunPod GPU pod (or any Ubuntu 22.04/24.04 box with an NVIDIA GPU), as root,
 # from the repo root:   bash tools/pod_setup.sh
 #
-# Idempotent. Models and outputs live on the persistent volume ($WORKSPACE, default /workspace).
+# Clone the repo to the LOCAL disk (git can't chmod on RunPod network volumes), e.g. /root.
+# Idempotent. Models and outputs (out/ work/ review/ are symlinked) live on the persistent
+# volume ($WORKSPACE, default /workspace).
 # The venv and apt packages live on the fast local container disk (RunPod network volumes are
 # object-storage FUSE mounts: fine for big model files, slow for thousands of small .py files),
 # so after a pod restart just run this again (~3-5 min; models are kept).
@@ -43,6 +45,15 @@ if [ "${FLASH_ATTN:-0}" = 1 ]; then
     uv pip install -q packaging ninja wheel
     MAX_JOBS=${MAX_JOBS:-8} uv pip install -q flash-attn --no-build-isolation || echo "flash-attn build failed; sdpa will be used"
 fi
+
+echo "== results on the volume: out/ work/ review/ -> $WS/factory-data/"
+for d in out work review; do
+    mkdir -p "$WS/factory-data/$d"
+    if [ ! -L "$REPO/$d" ]; then
+        [ -d "$REPO/$d" ] && cp -a "$REPO/$d/." "$WS/factory-data/$d/" && rm -rf "${REPO:?}/$d"
+        ln -s "$WS/factory-data/$d" "$REPO/$d"
+    fi
+done
 
 echo "== fonts"
 bash "$REPO/tools/install_fonts.sh" >/dev/null
