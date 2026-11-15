@@ -17,14 +17,14 @@ M2 needs **one 24 GB GPU**. M3 (the local LLM) will want 48 GB.
 
 ## 2. Get the code onto the pod
 
-The pod clones from GitHub. The repo is private, so use a fine-grained token with read-only
-access to this one repo:
-
 ```bash
 cd /workspace
-git clone https://<TOKEN>@github.com/gkami1/ege-shorts-factory.git
+git clone https://github.com/gkami1/ege-shorts-factory.git
 cd ege-shorts-factory && git checkout m2-voice
 ```
+
+(If the repo is made private later, clone with a read-only fine-grained token:
+`https://<TOKEN>@github.com/gkami1/ege-shorts-factory.git`.)
 
 Without GitHub, copy a bundle: `git bundle create ../factory.bundle --all` locally, then
 `scp -P <port> ../factory.bundle root@<ip>:/workspace/` and `git clone factory.bundle ege-shorts-factory` on the pod.
