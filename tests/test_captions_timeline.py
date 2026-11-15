@@ -46,8 +46,8 @@ def test_proportional_alignment_on_synthetic_clip(tmp_path):
     a[int(0.5 * sr) : int(1.5 * sr)] = 0.3 * np.sin(np.arange(sr) / 5)
     p = tmp_path / "x.wav"
     sf.write(p, a, sr)
-    words = Aligner({"aligner": "proportional"}).align(str(p), "раз два три")
-    assert [w["w"] for w in words] == ["раз", "два", "три"]
+    words = Aligner({"aligner": "proportional"}).align(str(p), "мама мыла раму")
+    assert [w["w"] for w in words] == ["мама", "мыла", "раму"]
     assert 0.45 <= words[0]["start"] <= 0.55
     assert 1.45 <= words[-1]["end"] <= 1.55
 

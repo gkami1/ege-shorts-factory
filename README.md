@@ -22,6 +22,15 @@ docker run --rm -v "$PWD:/app" -v ege-cache:/cache ege-factory pytest -q
 
 On Windows PowerShell use `${PWD}` instead of `$PWD`. Models (Silero, whisper) download once into the `ege-cache` volume.
 
+**Voice licensing:** the channel is monetized. Local builds use Silero (non-commercial license) for previews only. Publishable videos are built on a GPU pod with Qwen3-TTS (Apache-2.0); `out/<id>.meta.json` records `commercial_ok`. See [docs/runpod.md](docs/runpod.md).
+
+## Writing narration
+
+- Captions show digits and symbols, and the voice reads words: «Ответ: восемьдесят!» shows as «Ответ: 80!».
+- Write a number as words when its case matters («равно десяти»). Digits are read in the nominative («$t = 2$ с» → «две секунды»).
+- Formulas go in `$…$` (powers, fractions, roots, logs, units). Try one line with `factory say "…"`.
+- When the voice stresses a word wrongly, add it to `config/lexicon_ru.yaml`.
+
 ## Layout
 
 | Path | What |
@@ -35,7 +44,8 @@ On Windows PowerShell use `${PWD}` instead of `$PWD`. Models (Silero, whisper) d
 ## Milestones
 
 - [x] M0 design · [x] M1 end-to-end from a hand-written script
-- [ ] M2 LaTeX→speech normalizer, TTS bake-off, caption styling
+- [x] M2 LaTeX→speech normalizer + digit captions, Qwen3-TTS narrator (voice design → clone), TTS QA re-takes, bake-off, RunPod setup
+  - [ ] pick the narrator on the pod, run the bake-off, publishable build
 - [ ] M3 local LLM scriptwriter + verification gate + review queue
 - [ ] M4 batch, variation knobs, physics templates
 - [ ] M5 batch quality report

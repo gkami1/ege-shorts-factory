@@ -1,9 +1,11 @@
 """Word timestamps for each clip.
 
-We know the exact text of every clip, so alignment = map our words onto
-faster-whisper's word timestamps (difflib on normalized tokens); words whisper
-missed are interpolated by syllable (vowel) count. Fallback without whisper:
-spread words over the detected speech region proportionally to syllables.
+We know the exact text of every clip, so alignment = map our caption tokens onto
+faster-whisper's word timestamps (difflib on canonical forms, where numbers are digits on
+both sides); tokens whisper missed are interpolated by syllable count of their spoken words.
+Fallback without whisper: spread tokens over the detected speech region by syllables.
+
+The same transcript feeds the TTS QA (pipeline retries a clip whose WER is too high).
 """
 
 from __future__ import annotations
@@ -14,7 +16,8 @@ import re
 import numpy as np
 import soundfile as sf
 
-from ..speech.normalize import display_words
+from ..speech.normalize import LETTERS, Token, tokenize
+from ..speech.qa import merge_number_words
 
 _VOWELS = set("аеёиоуыэюяaeiouy")
 
@@ -24,11 +27,14 @@ def _syll(w: str) -> int:
 
 
 def _norm(w: str) -> str:
-    return re.sub(r"[^\wё]", "", w.lower().replace("ё", "е"))
+    w = re.sub(r"[^\w,/]", "", w.lower().replace("ё", "е").replace("+", "")).strip(",")
+    return LETTERS.get(w, w) if re.fullmatch(r"[a-z]", w) else "икс" if w == "х" else w
 
 
 def speech_region(path: str) -> tuple[float, float]:
     a, sr = sf.read(path, dtype="float32")
+    if a.ndim > 1:
+        a = a.mean(axis=1)
     hop = int(sr * 0.02)
     n = max(1, len(a) // hop)
     rms = np.sqrt(np.mean(a[: n * hop].reshape(n, hop) ** 2, axis=1))
@@ -60,6 +66,7 @@ class Aligner:
         self.cfg = cfg
         self._model = None
         self.mode = cfg.get("aligner", "whisper")
+        self._hyp: dict[str, list[tuple[str, float, float]]] = {}
 
     def _whisper(self):
         if self._model is None:
@@ -78,34 +85,46 @@ class Aligner:
             )
         return self._model
 
-    def align(self, path: str, text: str) -> list[dict]:
-        """Return [{w, start, end}] relative to the clip start."""
-        words = display_words(text)
-        t0, t1 = speech_region(path)
-        times: list[tuple[float, float] | None] = [None] * len(words)
-        if self.mode == "whisper":
+    def transcribe(self, path: str) -> list[tuple[str, float, float]] | None:
+        """Whisper words with times (no prompt, so it can't parrot our text). None if unavailable."""
+        if self.mode != "whisper":
+            return None
+        if path not in self._hyp:
             try:
-                times = self._whisper_times(path, words)
+                segs, _ = self._whisper().transcribe(
+                    _load_16k(path), language="ru", word_timestamps=True, beam_size=5, vad_filter=False,
+                    condition_on_previous_text=False,
+                )
+                self._hyp[path] = [(w.word.strip(), w.start, w.end) for s in segs for w in (s.words or [])]
             except Exception as e:  # missing package / model download failure → degrade, don't die
                 print(f"[align] whisper unavailable ({e!r}); using proportional timing")
                 self.mode = "proportional"
-        if all(t is None for t in times):
-            times = _spread(words, t0, t1)
-        times = _fill_gaps(words, times, t0, t1)
-        return [{"w": w, "start": round(a, 3), "end": round(b, 3)} for w, (a, b) in zip(words, times)]
+                return None
+        return self._hyp[path]
 
-    def _whisper_times(self, path: str, words: list[str]):
-        segs, _ = self._whisper().transcribe(
-            _load_16k(path), language="ru", word_timestamps=True, initial_prompt=" ".join(words), beam_size=5, vad_filter=False
-        )
-        hyp = [(w.word, w.start, w.end) for s in segs for w in (s.words or [])]
-        a, b = [_norm(w) for w in words], [_norm(h[0]) for h in hyp]
-        times: list = [None] * len(words)
-        for blk in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_matching_blocks():
-            for k in range(blk.size):
-                h = hyp[blk.b + k]
-                times[blk.a + k] = (h[1], h[2])
-        return times
+    def forget(self, path: str) -> None:
+        self._hyp.pop(path, None)
+
+    def align(self, path: str, text: str | list[Token]) -> list[dict]:
+        """Return [{w, start, end}] (caption tokens) relative to the clip start."""
+        toks = tokenize(text) if isinstance(text, str) else text
+        toks = [t for t in toks if t.display and t.words]
+        disp = [t.display for t in toks]
+        spoken = [" ".join(t.words) for t in toks]
+        t0, t1 = speech_region(path)
+        times: list[tuple[float, float] | None] = [None] * len(toks)
+        hyp = self.transcribe(path)
+        if hyp:
+            hyp = merge_number_words(hyp)
+            a, b = [_norm(d) for d in disp], [_norm(h[0]) for h in hyp]
+            for blk in difflib.SequenceMatcher(a=a, b=b, autojunk=False).get_matching_blocks():
+                for k in range(blk.size):
+                    h = hyp[blk.b + k]
+                    times[blk.a + k] = (h[1], h[2])
+        if all(t is None for t in times):
+            times = _spread(spoken, t0, t1)
+        times = _fill_gaps(spoken, times, t0, t1)
+        return [{"w": w, "start": round(a, 3), "end": round(b, 3)} for w, (a, b) in zip(disp, times)]
 
 
 def _fill_gaps(words, times, t0, t1):

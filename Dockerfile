@@ -2,10 +2,12 @@
 #   CPU:  docker build -t ege-factory .
 #   GPU:  docker build -t ege-factory:gpu \
 #           --build-arg BASE_IMAGE=nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04 \
-#           --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128 .
+#           --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cu128 --build-arg EXTRAS=align,dev,tts .
+# On RunPod use tools/pod_setup.sh instead (no Docker-in-pod needed), see docs/runpod.md.
 ARG BASE_IMAGE=ubuntu:24.04
 FROM ${BASE_IMAGE}
 ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
+ARG EXTRAS=align,dev
 
 ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
     LANG=C.UTF-8 LC_ALL=C.UTF-8 \
@@ -13,7 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 python3-venv python3-dev build-essential pkg-config git curl ca-certificates \
-        libcairo2-dev libpango1.0-dev ffmpeg fontconfig fonts-liberation2 \
+        libcairo2-dev libpango1.0-dev ffmpeg fontconfig fonts-liberation2 sox \
         texlive-xetex texlive-latex-extra texlive-lang-cyrillic texlive-fonts-recommended \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends dvisvgm && rm -
 
 RUN python3 -m venv /opt/venv
 ENV PATH=/opt/venv/bin:$PATH
-RUN pip install --upgrade pip && pip install torch --index-url ${TORCH_INDEX}
+RUN pip install --upgrade pip && pip install torch torchaudio --index-url ${TORCH_INDEX}
 
 COPY tools/install_fonts.sh /tmp/install_fonts.sh
 RUN pip install fonttools && bash /tmp/install_fonts.sh
@@ -30,5 +32,5 @@ RUN pip install fonttools && bash /tmp/install_fonts.sh
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install -e ".[align,dev]"
+RUN pip install -e ".[${EXTRAS}]"
 CMD ["bash"]

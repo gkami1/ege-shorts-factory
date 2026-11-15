@@ -1,0 +1,10 @@
+# Pod config with a preset Qwen speaker: works before the narrator voice exists (smoke test).
+tts:
+  engine: qwen
+  qwen:
+    mode: custom
+    speaker: Ryan
+
+captions:
+  whisper_model: large-v3
+  whisper_device: cuda

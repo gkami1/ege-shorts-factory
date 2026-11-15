@@ -24,8 +24,10 @@ from .captions.align import Aligner
 from .captions.ass import write_ass
 from .models import VideoScript, script_errors
 from .render.style import palette
+from .speech import qa
 from .speech.normalize import to_speech
 from .speech.tts import get_engine
+from .speech.tts.base import COMMERCIAL_OK
 
 
 class BuildError(RuntimeError):
@@ -56,17 +58,44 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
     work.mkdir(parents=True, exist_ok=True)
     cache = Path(os.environ.get("FACTORY_CACHE") or Path(paths["work"]) / "_cache")  # models + TTS clip cache
 
-    # 2. TTS
+    # 2. TTS (+ QA: whisper must hear what the script says, else re-take with another seed)
     t0 = time.perf_counter()
     segs = tl.beats(script)
     tts = get_engine(cfg["tts"], cache)
+    if tts.name not in COMMERCIAL_OK and not draft:
+        log(f"WARNING: {tts.describe()} is not licensed for commercial use — do not publish this video")
+    aligner = Aligner(cfg["captions"])
+    qa_cfg = cfg["tts"].get("qa", {})
+    qa_report = []
     for i, s in enumerate(segs):
-        s.spoken = to_speech(s.text)
-        clip = tts.synth_to_file(s.spoken, work / "audio" / f"{i:02d}_{s.key}.wav")
-        s.audio = str(clip)
-        s.audio_dur = sf.info(clip).duration
+        s.spoken = tts.prepare(to_speech(s.text))
+        clip_path = work / "audio" / f"{i:02d}_{s.key}.wav"
+        best = None
+        retries = 0 if tts.deterministic else int(qa_cfg.get("retries", 2))
+        for attempt in range(1 + retries):
+            clip = tts.synth_to_file(s.spoken, clip_path, attempt=attempt)
+            aligner.forget(str(clip))
+            hyp = aligner.transcribe(str(clip)) if qa_cfg.get("enabled", True) else None
+            score = qa.score(s.spoken, [h[0] for h in hyp]) if hyp is not None else 0.0
+            if best is None or score < best[0]:
+                best = (score, attempt, clip.read_bytes(), hyp)
+            if score <= float(qa_cfg.get("max_cer", 0.1)):
+                break
+            log(f"tts qa: {s.key} take {attempt} CER {score:.2f} → retry")
+        score, attempt, data, hyp = best
+        clip_path.write_bytes(data)
+        aligner.forget(str(clip_path))
+        if hyp is not None:
+            aligner._hyp[str(clip_path)] = hyp
+        qa_report.append({"beat": s.key, "cer": round(score, 3), "take": attempt, "heard": " ".join(h[0] for h in hyp or [])})
+        if score > float(qa_cfg.get("max_cer", 0.1)):
+            log(f"tts qa: {s.key} still CER {score:.2f} after retries — check {clip_path.name}")
+        s.audio = str(clip_path)
+        s.audio_dur = sf.info(clip_path).duration
     timings["tts"] = time.perf_counter() - t0
-    log(f"tts: {len(segs)} clips, {sum(s.audio_dur for s in segs):.1f}s of speech ({timings['tts']:.1f}s)")
+    (work / "tts_qa.json").write_text(json.dumps(qa_report, ensure_ascii=False, indent=1), encoding="utf-8")
+    log(f"tts: {tts.describe()}, {len(segs)} clips, {sum(s.audio_dur for s in segs):.1f}s of speech, "
+        f"worst CER {max(r['cer'] for r in qa_report):.2f} ({timings['tts']:.1f}s)")
 
     # 3. timeline + voice track
     fps = 15 if draft else cfg["video"]["fps"]
@@ -75,7 +104,6 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
 
     # 4. captions
     t0 = time.perf_counter()
-    aligner = Aligner(cfg["captions"])
     for s in segs:
         if s.key == "outro":  # the CTA card already shows the text
             continue
@@ -116,7 +144,9 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
         "hashtags": script.meta.hashtags,
         "answer": script.answer.value,
         "duration_s": round(probe_duration(out), 2),
-        "style": {"palette": cfg["render"]["palette"], "voice": f"{cfg['tts']['engine']}:{cfg['tts'].get(cfg['tts']['engine'], {}).get('speaker', '')}"},
+        "style": {"palette": cfg["render"]["palette"], "voice": tts.describe()},
+        "commercial_ok": tts.name in COMMERCIAL_OK,
+        "tts_worst_cer": max(r["cer"] for r in qa_report),
         "timings_s": {k: round(x, 1) for k, x in timings.items()},
         "draft": draft,
     }

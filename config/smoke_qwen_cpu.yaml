@@ -1,0 +1,8 @@
+# CPU smoke test of the Qwen3-TTS integration (slow; checks the API, not quality).
+tts:
+  engine: qwen
+  qwen:
+    mode: custom
+    speaker: Ryan
+    model: Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice
+    device: cpu

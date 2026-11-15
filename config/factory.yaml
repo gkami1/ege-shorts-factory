@@ -20,7 +20,26 @@ timing:                 # seconds
   outro_hold: 1.0       # extra static time on the outro card
 
 tts:
-  engine: silero        # pluggable: speech/tts/*.py registered by name
+  # pluggable: speech/tts/*.py registered by name.
+  #   qwen   — Qwen3-TTS, Apache-2.0: the production voice (GPU pod, see config/pod.yaml)
+  #   silero — non-commercial license: local CPU previews only, never publish
+  engine: silero
+  qa:                   # whisper re-listens to every clip; re-take with another seed if it misheard
+    enabled: true
+    max_cer: 0.1         # character error rate vs the script (numbers compared as digits)
+    retries: 2
+  qwen:
+    mode: clone         # clone (production: one fixed narrator) | custom (preset speaker) | design
+    voice: assets/voices/narrator_ru   # clone: .wav + .txt reference made by `factory voice-design/voice-pick`
+    speaker: Ryan       # custom mode
+    instruct: ""        # custom/design: style or voice description
+    language: Russian
+    model: null         # null → 1.7B model for the mode (see speech/tts/qwen.py)
+    device: auto        # auto | cuda:0 | cpu
+    dtype: auto         # bfloat16 on GPU, float32 on CPU
+    attn: auto          # flash_attention_2 if installed, else sdpa
+    stress: strip       # strip | acute (U+0301) — compare in the bake-off
+    seed: 1234
   silero:
     model_url: https://models.silero.ai/models/tts/ru/v4_ru.pt
     speaker: aidar      # aidar | baya | kseniya | xenia | eugene

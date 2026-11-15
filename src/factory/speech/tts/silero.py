@@ -15,6 +15,8 @@ from .base import TTSEngine
 
 class SileroTTS(TTSEngine):
     name = "silero"
+    default_stress = "plus"
+    deterministic = True
 
     def __init__(self, cfg: dict, cache_dir: Path):
         super().__init__(cfg, cache_dir)
@@ -36,7 +38,10 @@ class SileroTTS(TTSEngine):
             self._model = model
         return self._model
 
-    def synth(self, text: str) -> np.ndarray:
+    def describe(self) -> str:
+        return f"silero:{self.cfg.get('speaker', 'aidar')} (non-commercial)"
+
+    def synth(self, text: str, seed: int = 0) -> np.ndarray:
         model = self._load()
         audio = model.apply_tts(
             text=text,

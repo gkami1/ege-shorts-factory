@@ -1,0 +1,29 @@
+# `factory tts-bakeoff --config config/pod.yaml` reads this file (override with --spec).
+# Each variant is deep-merged over the `tts:` section of the active config.
+whisper_model: large-v3
+blind_seed: 7
+include_scripts: true      # also read every narration from video_scripts/*.json
+
+variants:
+  - name: qwen_clone_narrator          # production path (needs assets/voices/narrator_ru.wav)
+    tts: {engine: qwen, qwen: {mode: clone}}
+  - name: qwen_clone_narrator_acute    # same voice, stress marks as U+0301
+    tts: {engine: qwen, qwen: {mode: clone, stress: acute}}
+  - name: qwen_custom_ryan
+    tts: {engine: qwen, qwen: {mode: custom, speaker: Ryan}}
+  - name: qwen_custom_aiden
+    tts: {engine: qwen, qwen: {mode: custom, speaker: Aiden}}
+  - name: qwen_custom_uncle_fu
+    tts: {engine: qwen, qwen: {mode: custom, speaker: Uncle_Fu}}
+  - name: qwen_custom_ryan_06b
+    tts: {engine: qwen, qwen: {mode: custom, speaker: Ryan, model: Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice}}
+  - name: silero_aidar_reference       # NON-COMMERCIAL: quality reference only
+    tts: {engine: silero, silero: {speaker: aidar, device: cuda}}
+
+lines:
+  - Координата тела меняется по закону икс от тэ равно пять плюс два тэ плюс три тэ в квадрате.
+  - Чему равна проекция скорости тела на ось Ox в момент $t = 2$ с?
+  - Логарифм восьми по основанию два — это три, ведь два в кубе равно восьми.
+  - Сила тока равна $0,5$ А, а напряжение — $220$ В. Найдите сопротивление.
+  - Ответ: ноль целых двадцать пять сотых.
+  - Корень из шестнадцати — четыре. Синус тридцати градусов — одна вторая.

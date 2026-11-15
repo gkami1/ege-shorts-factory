@@ -1,0 +1,48 @@
+# Pronunciation lexicon for the narrator (used by speech/normalize.py).
+#
+# stress: word (any case, ё = е) → the same word with '+' before the stressed vowel.
+#   Silero reads '+' directly; engines that don't support it get U+0301 or nothing
+#   (tts.<engine>.stress: plus | acute | strip). Add words here when the voice stresses them wrong.
+# spoken: text as written in the script → what the voice should say (captions keep the original).
+
+stress:
+  степени: ст+епени
+  степень: ст+епень
+  степенью: ст+епенью
+  показатель: показ+атель
+  показателе: показ+ателе
+  показателя: показ+ателя
+  логарифм: логар+ифм
+  логарифма: логар+ифма
+  основанию: основ+анию
+  квадрате: квадр+ате
+  умножить: умн+ожить
+  разделить: раздел+ить
+  равно: равн+о
+  равна: равн+а
+  равен: р+авен
+  ответ: отв+ет
+  задачу: зад+ачу
+  задача: зад+ача
+  проекция: про+екция
+  проекцию: про+екцию
+  скорости: ск+орости
+  ускорение: ускор+ение
+  косинус: к+осинус
+  синус: с+инус
+  тангенс: т+ангенс
+  котангенс: кот+ангенс
+  корень: к+орень
+  кубический: куб+ический
+  десятых: дес+ятых
+  сотых: с+отых
+  целых: ц+елых
+  числитель: числ+итель
+  знаменатель: знамен+атель
+  произведение: произвед+ение
+  сумма: с+умма
+  икс: +икс
+  игрек: +игрек
+
+spoken:
+  "№": номер
