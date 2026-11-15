@@ -14,10 +14,11 @@ from ..normalize import stress_format
 ENGINES = {
     "silero": "factory.speech.tts.silero:SileroTTS",
     "qwen": "factory.speech.tts.qwen:QwenTTS",
+    "cosyvoice": "factory.speech.tts.cosyvoice:CosyVoiceTTS",
 }
 
 # Engines whose weights may be used on a monetized channel. Anything else is preview-only.
-COMMERCIAL_OK = {"qwen"}
+COMMERCIAL_OK = {"qwen", "cosyvoice"}
 
 
 class TTSEngine(ABC):

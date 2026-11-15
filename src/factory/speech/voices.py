@@ -112,6 +112,57 @@ def pick(k: int, src_dir: Path, voice: str) -> Path:
     return dst.with_suffix(".wav")
 
 
+RECORD_TEXT = (
+    "Привет! Сейчас разберём задачу из ЕГЭ. Смотри: два в степени икс равно десяти, "
+    "а найти нужно два в степени икс плюс три. Икс искать не нужно — сумма в показателе "
+    "превращается в произведение степеней. Десять умножить на восемь — восемьдесят. Вот и ответ!"
+)
+
+
+def import_recording(src: Path, text: str, voice: str, cfg: dict) -> tuple[Path, float | None]:
+    """A real recording (the channel owner's own voice) → the narrator reference.
+
+    Mono 24 kHz, high-passed, loudness-normalized, silence-trimmed. Whisper checks that the
+    transcript matches what was said (a wrong transcript is the #1 cause of bad clones).
+    Returns (wav path, transcript CER or None if whisper is unavailable).
+    """
+    import subprocess
+    import tempfile
+
+    from ..captions.align import Aligner
+    from . import qa
+
+    dst = Path(voice)
+    dst = dst if dst.is_absolute() else ROOT / dst
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td) / "x.wav"
+        subprocess.run(
+            ["ffmpeg", "-loglevel", "error", "-y", "-i", str(src), "-ac", "1", "-ar", "24000",
+             "-af", "highpass=f=70,loudnorm=I=-20:TP=-2:LRA=11", str(tmp)],
+            check=True,
+        )
+        a, sr = sf.read(tmp, dtype="float32")
+    a = _tidy(a, sr)
+    dur = len(a) / sr
+    if not 5 <= dur <= 30:
+        raise ValueError(f"recording is {dur:.1f}s; use 10–25 s of speech (trim it, or record again)")
+    sf.write(dst.with_suffix(".wav"), a, sr, subtype="PCM_16")
+    dst.with_suffix(".txt").write_text(text.strip() + "\n", encoding="utf-8")
+    cer = None
+    hyp = Aligner({**cfg["captions"], "aligner": "whisper"}).transcribe(str(dst.with_suffix(".wav")))
+    if hyp is not None:
+        cer = qa.score(to_speech(text), [h[0] for h in hyp])
+    meta = {
+        "source": Path(src).name, "duration_s": round(dur, 2), "ref_text": text.strip(),
+        "transcript_cer": None if cer is None else round(cer, 3),
+        "heard": " ".join(h[0] for h in hyp or []),
+        "license": "The channel owner's own voice, recorded and used by them for this channel.",
+    }
+    dst.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+    return dst.with_suffix(".wav"), cer
+
+
 def _free() -> None:
     import gc
 

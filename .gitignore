@@ -6,3 +6,7 @@ work/
 review/
 .cache/
 media/
+
+# narrator reference recordings: a real person's voice must not be public (anyone could clone it)
+assets/voices/*.wav
+assets/voices/raw/

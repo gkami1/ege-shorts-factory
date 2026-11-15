@@ -40,6 +40,11 @@ tts:
     attn: auto          # flash_attention_2 if installed, else sdpa
     stress: strip       # strip | acute (U+0301) — compare in the bake-off
     seed: 1234
+  cosyvoice:            # CosyVoice 3 clone (Apache-2.0), own venv: tools/cosyvoice_setup.sh
+    voice: assets/voices/narrator_ru
+    speed: 1.0
+    seed: 1234
+    text_frontend: false  # its zh/en text normalizer; our normalizer already did the work
   silero:
     model_url: https://models.silero.ai/models/tts/ru/v4_ru.pt
     speaker: aidar      # aidar | baya | kseniya | xenia | eugene

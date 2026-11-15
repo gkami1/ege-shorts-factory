@@ -137,6 +137,25 @@ def voice_pick(k: int, config: Optional[Path] = typer.Option(None, "--config")):
     typer.echo(str(pick(k, cfg["paths"]["work"] / "voices", cfg["tts"]["qwen"]["voice"])))
 
 
+@app.command("voice-import")
+def voice_import(
+    recording: Path,
+    text_file: Optional[Path] = typer.Option(None, "--text-file", help="Exact transcript (default: the recording script)"),
+    config: Optional[Path] = typer.Option(None, "--config"),
+):
+    """Your own recording (any audio format, 10–25 s) → the narrator reference for voice cloning."""
+    from .speech.voices import RECORD_TEXT, import_recording
+
+    cfg = load_config(config)
+    text = text_file.read_text(encoding="utf-8") if text_file else RECORD_TEXT
+    wav, cer = import_recording(recording, text, cfg["tts"]["qwen"]["voice"], cfg)
+    typer.echo(f"{wav}")
+    if cer is not None:
+        typer.echo(f"transcript check: CER {cer:.2f} " + ("OK" if cer <= 0.1 else
+                   "— the text doesn't match what was said; fix it (see the .json 'heard' field) and re-import"))
+    _hard_exit(0)
+
+
 @app.command("tts-bakeoff")
 def tts_bakeoff(
     config: Optional[Path] = typer.Option(None, "--config"),

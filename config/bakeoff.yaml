@@ -9,6 +9,8 @@ variants:
     tts: {engine: qwen, qwen: {mode: clone}}
   - name: qwen_clone_narrator_acute    # same voice, stress marks as U+0301
     tts: {engine: qwen, qwen: {mode: clone, stress: acute}}
+  - name: cosyvoice_clone_narrator     # same reference clip, CosyVoice 3
+    tts: {engine: cosyvoice}
   - name: qwen_custom_ryan
     tts: {engine: qwen, qwen: {mode: custom, speaker: Ryan}}
   - name: qwen_custom_aiden
