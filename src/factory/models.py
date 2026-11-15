@@ -94,18 +94,35 @@ class Read(_Strict):
     target: str = Field(description="Span with the quantity to find (hand-drawn circle). " + _SPAN_DESC)
     target_narration: str
 
+_SYMPY_DESC = (
+    "Machine form in SymPy syntax (explicit *, ** for powers, log(a, base), sqrt(), pi; angles in radians). "
+    "Either one expression or a chain of equalities separated by ' = '."
+)
+
+
 class Step(_Strict):
     tex: str = Field(description="Display-math LaTeX of the whole expression at this step, no $ delimiters")
     narration: str = Field(description="What the voice says while this step is on screen (1 sentence)")
+    sympy: str | None = Field(
+        None,
+        description=_SYMPY_DESC + " Must be the same maths as `tex`. Consecutive single-expression steps must be "
+        "equal; every equality must hold given substitute.values and the answer.",
+    )
 
 class Substitute(_Strict):
     flash: str = Field(description="Span of the known value that flashes red on the sheet. " + _SPAN_DESC)
     tex: str | None = Field(None, description="Short handwritten calculation shown on the sheet, e.g. '10\\cdot 8 = 80'")
     narration: str
+    values: dict[str, str] = Field(
+        default_factory=dict,
+        description="Given facts used by the solution, SymPy syntax: {'2**x': '10'}, {'t': '2', 'm': '3'}",
+    )
 
 class Answer(_Strict):
     value: str = Field(pattern=ANSWER_RE, description="Final answer in blank form; must equal the official answer")
     narration: str
+    symbol: str | None = Field(None, description="The unknown whose value is the answer, if any (e.g. 'x', 'v')")
+    unit: str | None = Field(None, description="Physics: unit printed after the answer field; must equal task.answer_unit")
 
 class Outro(_Strict):
     cta: str = "Больше разборов — в профиле"

@@ -18,6 +18,7 @@ dependencies = [
     "pillow>=10,<12",  # manim 0.19 camera breaks on Pillow 12+ (fromarray mode)
     "fonttools>=4.47",
     "soundfile>=0.12",
+    "lark>=1.1",  # sympy LaTeX parser backend (verification gate)
 ]
 # torch is installed separately (CPU or CUDA wheel index), see Dockerfile.
 

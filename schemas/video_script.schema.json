@@ -12,6 +12,32 @@
         "narration": {
           "title": "Narration",
           "type": "string"
+        },
+        "symbol": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The unknown whose value is the answer, if any (e.g. 'x', 'v')",
+          "title": "Symbol"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Physics: unit printed after the answer field; must equal task.answer_unit",
+          "title": "Unit"
         }
       },
       "required": [
@@ -136,6 +162,19 @@
           "description": "What the voice says while this step is on screen (1 sentence)",
           "title": "Narration",
           "type": "string"
+        },
+        "sympy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Machine form in SymPy syntax (explicit *, ** for powers, log(a, base), sqrt(), pi; angles in radians). Either one expression or a chain of equalities separated by ' = '. Must be the same maths as `tex`. Consecutive single-expression steps must be equal; every equality must hold given substitute.values and the answer.",
+          "title": "Sympy"
         }
       },
       "required": [
@@ -169,6 +208,14 @@
         "narration": {
           "title": "Narration",
           "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Given facts used by the solution, SymPy syntax: {'2**x': '10'}, {'t': '2', 'm': '3'}",
+          "title": "Values",
+          "type": "object"
         }
       },
       "required": [

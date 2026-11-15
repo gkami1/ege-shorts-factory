@@ -47,5 +47,7 @@ On Windows PowerShell use `${PWD}` instead of `$PWD`. Models (Silero, whisper) d
 - [x] M2 LaTeX→speech normalizer + digit captions, Qwen3-TTS narrator (voice design → clone), TTS QA re-takes, bake-off, RunPod setup
   - [ ] pick the narrator on the pod, run the bake-off, publishable build
 - [ ] M3 local LLM scriptwriter + verification gate + review queue
+  - [x] verification gate (`factory verify`): SymPy step chain, final value, LaTeX ↔ machine form, sheet arithmetic, spoken answer, units, bank cross-check; review queue (`review/<id>/`, `factory review-accept`); self-consistency helper
+  - [ ] LLM scriptwriter (pod)
 - [ ] M4 batch, variation knobs, physics templates
 - [ ] M5 batch quality report

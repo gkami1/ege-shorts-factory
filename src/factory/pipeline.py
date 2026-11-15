@@ -53,6 +53,13 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
     task = bank[script.task_id]
     if errs := script_errors(script, task):
         raise BuildError("script failed validation:\n  " + "\n  ".join(errs))
+    from .verify.gate import verify
+
+    report = verify(script, task)
+    for w in report.warnings:
+        log(f"verify: {w}")
+    if not report.ok:
+        raise BuildError("verification gate failed:\n  " + "\n  ".join(report.errors))
 
     work = Path(paths["work"]) / task.id
     work.mkdir(parents=True, exist_ok=True)

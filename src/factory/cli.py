@@ -85,6 +85,60 @@ def validate(config: Optional[Path] = typer.Option(None, "--config")):
 
 
 @app.command()
+def verify(
+    targets: Optional[list[str]] = typer.Argument(None, help="Task ids or script paths (default: all of video_scripts/)"),
+    config: Optional[Path] = typer.Option(None, "--config"),
+    strict: bool = typer.Option(False, "--strict", help="Missing machine forms are errors (LLM output)"),
+    to_review: bool = typer.Option(False, "--to-review", help="Copy failing scripts to review/<id>/"),
+):
+    """Run the verification gate (maths, answer, units, narration) on video scripts."""
+    from .bank import load_bank
+    from .pipeline import load_script
+    from .verify.gate import verify as run
+    from .verify.review import send_to_review
+
+    cfg = load_config(config)
+    bank = load_bank(cfg["paths"]["tasks"])
+    paths = []
+    for t in targets or sorted(str(p) for p in Path(cfg["paths"]["scripts"]).glob("*.json")):
+        p = Path(t)
+        paths.append(p if p.suffix == ".json" else cfg["paths"]["scripts"] / f"{t}.json")
+    failed = 0
+    for p in paths:
+        s = load_script(p)
+        if s.task_id not in bank:
+            typer.echo(f"{p.name}: unknown task {s.task_id}")
+            failed += 1
+            continue
+        rep = run(s, bank[s.task_id], strict=strict)
+        typer.echo(rep.text())
+        if not rep.ok:
+            failed += 1
+            if to_review:
+                d = send_to_review(p.read_text(encoding="utf-8"), rep, cfg["paths"]["review"])
+                typer.echo(f"  → {d}")
+    typer.echo(f"{len(paths) - failed}/{len(paths)} passed")
+    raise typer.Exit(1 if failed else 0)
+
+
+@app.command("review-accept")
+def review_accept(task_id: str, config: Optional[Path] = typer.Option(None, "--config")):
+    """Re-verify an edited script in review/<id>/ and move it to video_scripts/ if it passes."""
+    from .bank import load_bank
+    from .pipeline import load_script
+    from .verify.gate import verify as run
+    from .verify.review import accept
+
+    cfg = load_config(config)
+    src = cfg["paths"]["review"] / task_id / "script.json"
+    rep = run(load_script(src), load_bank(cfg["paths"]["tasks"])[task_id], strict=True)
+    typer.echo(rep.text())
+    if not rep.ok:
+        raise typer.Exit(1)
+    typer.echo(f"accepted → {accept(task_id, cfg['paths']['review'], cfg['paths']['scripts'])}")
+
+
+@app.command()
 def preview(task_id: str, config: Optional[Path] = typer.Option(None, "--config"), draft: bool = True, at: float = 0.8):
     """Contact sheet: one frame per beat (at `at` of each beat) → work/<id>/preview.png."""
     import subprocess
