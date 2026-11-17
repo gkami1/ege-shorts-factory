@@ -80,9 +80,14 @@ class Aligner:
                     dev = "cuda" if torch.cuda.is_available() else "cpu"
                 except ImportError:
                     dev = "cpu"
-            self._model = WhisperModel(
-                self.cfg.get("whisper_model", "small"), device=dev, compute_type="float16" if dev == "cuda" else "int8"
-            )
+            kw = dict(device=dev, compute_type="float16" if dev == "cuda" else "int8")
+            try:
+                self._model = WhisperModel(self.cfg.get("whisper_model", "small"), **kw)
+            except RuntimeError as e:
+                # RunPod network volumes (geesefs) sometimes return an empty first read of a large, cold
+                # file ("model.bin is incomplete"); the second read succeeds.
+                print(f"[align] whisper load failed ({e}); retrying once")
+                self._model = WhisperModel(self.cfg.get("whisper_model", "small"), **kw)
         return self._model
 
     def transcribe(self, path: str) -> list[tuple[str, float, float]] | None:

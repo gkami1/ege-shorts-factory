@@ -38,6 +38,11 @@ def log(msg: str) -> None:
     print(f"[factory] {msg}", flush=True)
 
 
+def _worst_cer(qa_report: list[dict]) -> float | None:
+    checked = [r["cer"] for r in qa_report if r["cer"] is not None]
+    return max(checked) if checked else None
+
+
 def load_script(path: Path) -> VideoScript:
     return VideoScript.model_validate_json(path.read_text(encoding="utf-8"))
 
@@ -94,7 +99,9 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
         aligner.forget(str(clip_path))
         if hyp is not None:
             aligner._hyp[str(clip_path)] = hyp
-        qa_report.append({"beat": s.key, "cer": round(score, 3), "take": attempt, "heard": " ".join(h[0] for h in hyp or [])})
+        # cer None = not checked (QA off or whisper unavailable), never a fake 0.0
+        qa_report.append({"beat": s.key, "cer": round(score, 3) if hyp is not None else None, "take": attempt,
+                          "heard": " ".join(h[0] for h in hyp or [])})
         if score > float(qa_cfg.get("max_cer", 0.1)):
             log(f"tts qa: {s.key} still CER {score:.2f} after retries — check {clip_path.name}")
         s.audio = str(clip_path)
@@ -102,7 +109,8 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
     timings["tts"] = time.perf_counter() - t0
     (work / "tts_qa.json").write_text(json.dumps(qa_report, ensure_ascii=False, indent=1), encoding="utf-8")
     log(f"tts: {tts.describe()}, {len(segs)} clips, {sum(s.audio_dur for s in segs):.1f}s of speech, "
-        f"worst CER {max(r['cer'] for r in qa_report):.2f} ({timings['tts']:.1f}s)")
+        + (f"worst CER {worst_cer:.2f}" if (worst_cer := _worst_cer(qa_report)) is not None
+           else "TTS QA NOT RUN (whisper unavailable or qa disabled)") + f" ({timings['tts']:.1f}s)")
 
     # 3. timeline + voice track
     fps = 15 if draft else cfg["video"]["fps"]
@@ -153,7 +161,7 @@ def build(script_path: Path, cfg: dict, draft: bool = False, out_dir: Path | Non
         "duration_s": round(probe_duration(out), 2),
         "style": {"palette": cfg["render"]["palette"], "voice": tts.describe()},
         "commercial_ok": tts.name in COMMERCIAL_OK,
-        "tts_worst_cer": max(r["cer"] for r in qa_report),
+        "tts_worst_cer": _worst_cer(qa_report),
         "timings_s": {k: round(x, 1) for k, x in timings.items()},
         "draft": draft,
     }

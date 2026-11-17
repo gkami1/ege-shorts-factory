@@ -22,6 +22,11 @@ VIRTUAL_ENV=$CVENV uv pip install -q --no-build-isolation openai-whisper==202311
 VIRTUAL_ENV=$CVENV uv pip install -q --index-strategy unsafe-best-match \
     --extra-index-url https://download.pytorch.org/whl/cu121 -r /tmp/cv_req.txt huggingface_hub
 VIRTUAL_ENV=$CVENV uv pip install -q lightning==2.2.4 || true   # imported by some modules
+# PyPI's onnxruntime-gpu 1.18.0 is a CUDA 11 build (libcublasLt.so.11 missing → silent CPU fallback).
+# The CUDA 12 / cuDNN 8.9 build (matches torch 2.3.1+cu121) lives on the feed CosyVoice's requirements name.
+VIRTUAL_ENV=$CVENV uv pip install -q --reinstall --no-deps \
+    --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/ \
+    onnxruntime-gpu==1.18.0
 
 if [ ! -f "$MODEL_DIR/.complete" ]; then
     "$CVENV/bin/python" -c "from huggingface_hub import snapshot_download as d; d('$MODEL', local_dir='$MODEL_DIR')"

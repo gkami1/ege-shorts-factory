@@ -15,10 +15,12 @@ PY=${COSYVOICE_PYTHON:?}
 BASE=${COSYVOICE_BASE_MODEL_DIR:-$WS/cache/models/Fun-CosyVoice3-0.5B-2512}
 EXP=${FT_EXP_DIR:-/root/ft/$NAME}          # local disk: checkpoints are written often
 OUT=$WS/cache/models/$NAME
-export PYTHONPATH=$CV:$CV/third_party/Matcha-TTS:${PYTHONPATH:-} PYTHONIOENCODING=UTF-8
+export PYTHONPATH=$CV:$CV/third_party/Matcha-TTS:${PYTHONPATH:-} PYTHONIOENCODING=UTF-8 PATH=$HOME/.local/bin:$PATH
 mkdir -p "$EXP"
 
-"$PY" -c "import deepspeed" 2>/dev/null || VIRTUAL_ENV=$(dirname "$(dirname "$PY")") uv pip install -q deepspeed==0.15.1
+# training-only deps that tools/cosyvoice_setup.sh leaves out (make_parquet_list: pandas; train.py: tensorboard)
+"$PY" -c "import deepspeed, pandas, tensorboard" 2>/dev/null || VIRTUAL_ENV=$(dirname "$(dirname "$PY")") \
+    uv pip install -q deepspeed==0.15.1 pandas tensorboard
 
 echo "== 1/5 speaker embeddings (campplus)"
 "$PY" "$CV/tools/extract_embedding.py" --dir "$DATA" --onnx_path "$BASE/campplus.onnx"
