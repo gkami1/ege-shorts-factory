@@ -171,3 +171,43 @@ def sp_ratio(a, b):
     import sympy as sp
 
     return sp.Symbol(a) / sp.Symbol(b)
+
+
+# --- false rejections seen on the first 35B pod run (2026-11-17)
+
+def test_trig_given_named_sin_A_matches_tex_sin_A():
+    s = script("m_profile_01_0001",
+               [(r"\sin A = \frac{BC}{AB}", "sin_A = BC / AB"), (r"BC = AB \cdot \sin A", "BC = AB * sin_A")],
+               "15", flash="$AB = 25$", given=["$AB = 25$", r"$\sin A = 0{,}6$"], target="$BC$",
+               values={"AB": "25", "sin_A": "0.6"}, sub_tex=r"BC = 25 \cdot 0{,}6 = 15",
+               narration="Ответ: пятнадцать!", symbol="BC")
+    rep = verify(s, BANK["m_profile_01_0001"], strict=True)
+    assert rep.ok, rep.text()
+
+
+def prob_script(steps, answer="0,512"):
+    return script("m_profile_05_0001", steps, answer, flash="$0{,}8$", given=["$0{,}8$"],
+                  target="вероятность того, что стрелок попадёт все три раза",
+                  sub_tex=r"0{,}8^{3} = 0{,}512", narration="Ответ: ноль целых пятьсот двенадцать тысячных!")
+
+
+def test_step_may_introduce_a_name_for_the_value():
+    rep = verify(prob_script([(r"P = 0{,}8 \cdot 0{,}8 \cdot 0{,}8", "P = 0.8 * 0.8 * 0.8"),
+                              (r"P = 0{,}8^{3}", "P = 0.8**3")]), BANK["m_profile_05_0001"], strict=True)
+    assert rep.ok, rep.text()
+
+
+def test_introduced_name_is_held_to_its_value():
+    rep = verify(prob_script([(r"P = 0{,}8 \cdot 0{,}8 \cdot 0{,}8", "P = 0.8 * 0.8 * 0.8"),
+                              (r"P = 0{,}8^{2}", "P = 0.8**2")]), BANK["m_profile_05_0001"], strict=True)
+    assert not rep.ok and any("step 1" in e for e in rep.errors)
+
+
+def test_ellipsis_span_expands_to_exact_text():
+    from factory.models import expand_ellipsis
+
+    cond = BANK["m_profile_04_0001"].condition
+    got = expand_ellipsis(cond, "вероятность того, что ... не будет вопроса о кислотах")
+    assert got == "вероятность того, что в случайно выбранном на экзамене билете не будет вопроса о кислотах"
+    assert expand_ellipsis(cond, "найти вероятность … кислотах") == "найти вероятность … кислотах"  # no exact piece
+    assert expand_ellipsis(cond, "20 билетов") == "20 билетов"

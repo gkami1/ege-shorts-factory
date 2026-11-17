@@ -90,7 +90,9 @@ def verify(script: VideoScript, task: Task, strict: bool = False) -> Report:
     env, problems = sym.bind_facts(facts)
     r.errors += [f"facts: {p}" for p in problems]
 
-    # steps
+    # steps. A step 'P = <number>' whose P no fact binds introduces a name (P for the probability): bind it, so
+    # it isn't sampled at random, and later steps that reuse it are checked against that value.
+    env = dict(env)
     chains: list[list[sp.Expr] | None] = []
     for i, st in enumerate(script.steps):
         if not st.sympy:
@@ -104,6 +106,10 @@ def verify(script: VideoScript, task: Task, strict: bool = False) -> Report:
             chains.append(None)
             continue
         chains.append(ch)
+        if len(ch) >= 2 and isinstance(ch[0], sp.Symbol) and ch[0] not in env:
+            val = ch[1].subs(env)
+            if not val.free_symbols:
+                env[ch[0]] = val
         for a, b in zip(ch, ch[1:]):
             if sym.equal(a, b, env) is False:
                 r.errors.append(f"step {i}: {a} = {b} is false" + (" given the facts" if env else ""))
@@ -177,8 +183,10 @@ def _check_tex(i: int, tex: str, chain: list[sp.Expr], r: Report) -> None:
     if len(tc) != len(chain):
         r.errors.append(f"step {i}: tex has {len(tc)} parts, sympy has {len(chain)}")
         return
+    names = {str(s) for b in chain for s in b.free_symbols}
     for a, b in zip(tc, chain):
         a = a.subs({s: sp.Symbol(str(s)) for s in a.free_symbols})
+        a = sym.fold_function_names(a, names)
         if sym.equal(a, b) is False:
             r.errors.append(f"step {i}: tex shows {a}, sympy says {b}")
 

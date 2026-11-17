@@ -20,7 +20,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from ..models import Task, VideoScript, answers_equal
+from ..models import Task, VideoScript, answers_equal, fix_spans
 from ..verify.gate import agreement, verify
 from ..verify.review import send_to_review
 from . import prompts
@@ -105,6 +105,7 @@ class ScriptWriter:
             except ValidationError as e:
                 problems = [f"{'.'.join(map(str, er['loc']))}: {er['msg']}" for er in e.errors()][:12]
                 continue
+            fix_spans(script, task)
             try:
                 rep = verify(script, task, strict=True)
             except Exception as e:  # a gate crash on odd model output must not take down the whole batch

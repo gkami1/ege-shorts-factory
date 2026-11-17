@@ -155,12 +155,40 @@ def check_span(condition: str, span: str) -> str | None:
         return "empty span"
     idx = condition.find(span)
     if idx < 0:
+        if "..." in span or "…" in span:
+            return (f"span {span!r} not found in condition: spans are copied character for character, "
+                    "never shortened with '...'; use a shorter exact phrase instead")
         return f"span {span!r} not found in condition"
     if span.count("$") % 2:
         return f"span {span!r} splits a $...$ formula"
     if condition[:idx].count("$") % 2:
         return f"span {span!r} starts inside a $...$ formula"
     return None
+
+def expand_ellipsis(condition: str, span: str) -> str:
+    """'вероятность того, что ... не будет вопроса' → the exact condition text from the first piece to the last,
+    when the pieces occur in it in order (LLMs shorten long spans this way). Otherwise the span unchanged."""
+    if condition.find(span) >= 0:
+        return span
+    pieces = [p.strip() for p in span.replace("…", "...").split("...")]
+    if len(pieces) < 2 or not all(pieces):
+        return span
+    start = condition.find(pieces[0])
+    pos = start
+    for p in pieces[1:]:
+        if pos < 0:
+            return span
+        pos = condition.find(p, pos + 1)
+    if start < 0 or pos < 0:
+        return span
+    return condition[start:pos + len(pieces[-1])]
+
+def fix_spans(script: VideoScript, task: Task) -> None:
+    """Deterministic span repairs applied to LLM output before the gate (in place)."""
+    r = script.read
+    r.given = [expand_ellipsis(task.condition, g) for g in r.given]
+    r.target = expand_ellipsis(task.condition, r.target)
+    script.substitute.flash = expand_ellipsis(task.condition, script.substitute.flash)
 
 def script_errors(script: VideoScript, task: Task) -> list[str]:
     """Structural checks of a script against its task (first stage of the verification gate)."""

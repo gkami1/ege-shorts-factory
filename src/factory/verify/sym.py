@@ -81,6 +81,17 @@ def parse_tex(t: str) -> sp.Expr:
                    if "{" in str(s)})
 
 
+def fold_function_names(e: sp.Expr, names: set[str]) -> sp.Expr:
+    """sin(A) → the symbol sin_A when the machine form names that value sin_A (a given, like «sin A = 0,6»)."""
+    reps = {}
+    for f in e.atoms(sp.Function):
+        if len(f.args) == 1 and isinstance(f.args[0], sp.Symbol):
+            n = f"{type(f).__name__}_{f.args[0]}"
+            if n in names:
+                reps[f] = sp.Symbol(n)
+    return e.xreplace(reps) if reps else e
+
+
 def tex_chain(t: str) -> list[sp.Expr]:
     return [parse_tex(p) for p in split_chain(t)]
 
