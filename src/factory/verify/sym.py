@@ -23,7 +23,7 @@ _TRANSFORMS = standard_transformations + (implicit_multiplication_application, c
 _LOCALS = {"e": sp.E, "pi": sp.pi, "ln": sp.log, "lg": lambda x: sp.log(x, 10), "tg": sp.tan, "ctg": sp.cot,
            "N": sp.Symbol("N"), "S": sp.Symbol("S"), "E": sp.Symbol("E"), "I": sp.Symbol("I"),
            "Q": sp.Symbol("Q"), "O": sp.Symbol("O"), "beta": sp.Symbol("beta"), "gamma": sp.Symbol("gamma")}
-_REL = re.compile(r"(?<![<>=!])=(?!=)")
+_REL = re.compile(r"(?<![<>=!])==?(?!=)")   # '=' or Python-style '==' (LLMs write both); not <=, >=, !=
 
 
 class ParseError(ValueError):
@@ -31,16 +31,27 @@ class ParseError(ValueError):
 
 
 def split_chain(s: str) -> list[str]:
-    """'a = b = c' → ['a', 'b', 'c'] (ignores '==', '<=', '>=')."""
+    """'a = b = c' (or 'a == b') → ['a', 'b', 'c']; '<=', '>=', '!=' are not split (and then fail to parse)."""
     return [p.strip() for p in _REL.split(s) if p.strip()]
 
 
+# Geometry names (segment AB, triangle ABC) are ONE quantity, not the product A*B. Implicit multiplication
+# would split them, and 'BC / AB' would then even parse as B*C/A*B. Both parsers keep them whole.
+_SEGMENT = re.compile(r"(?<![A-Za-z_\\])([A-Z]{2,3})(?![A-Za-z_(])")
+_TEX_SEGMENT = re.compile(r"(?<![A-Za-z\\])(?<!mathit\{)([A-Z]{2,3})(?![A-Za-z])")
+
+
 def parse_sympy(s: str) -> sp.Expr:
+    s = _SEGMENT.sub(r"Symbol('\1')", s)
     try:
-        return parse_expr(s.replace("−", "-").replace("·", "*"), local_dict=dict(_LOCALS),
-                          transformations=_TRANSFORMS, evaluate=True)
-    except Exception as e:  # sympy raises many types here
-        raise ParseError(f"cannot parse {s!r}: {e}") from e
+        e = parse_expr(s.replace("−", "-").replace("·", "*"), local_dict=dict(_LOCALS),
+                       transformations=_TRANSFORMS, evaluate=True)
+    except Exception as ex:  # sympy raises many types here
+        raise ParseError(f"cannot parse {s!r}: {ex}") from ex
+    if not isinstance(e, sp.Expr):  # 'a > b', 'a == b', True/False: not a quantity we can compare
+        raise ParseError(f"{s!r} is not a numeric expression (got {type(e).__name__}); "
+                         "chain equal values with ' = ' only")
+    return e
 
 
 def parse_chain(s: str) -> list[sp.Expr]:
@@ -52,6 +63,7 @@ def _clean_tex(t: str) -> str:
     t = re.sub(r"\\(left|right|displaystyle)\b", "", t)
     t = re.sub(r"\\[,;!]|\\quad|\\qquad", " ", t)
     t = re.sub(r"(\d),(\d)", r"\1.\2", t)
+    t = _TEX_SEGMENT.sub(r"\\mathit{\1}", t)
     return t.replace("−", "-")
 
 
@@ -64,7 +76,9 @@ def parse_tex(t: str) -> sp.Expr:
         raise ParseError(f"cannot parse LaTeX {t!r}: {ex}") from ex
     if not isinstance(e, sp.Basic):  # lark ambiguity tree
         raise ParseError(f"ambiguous LaTeX {t!r}")
-    return e
+    # T_{1} → T_1, the name the machine form uses (otherwise indexed quantities never match)
+    return e.subs({s: sp.Symbol(str(s).replace("{", "").replace("}", "")) for s in e.free_symbols
+                   if "{" in str(s)})
 
 
 def tex_chain(t: str) -> list[sp.Expr]:
@@ -119,7 +133,7 @@ def bind_facts(facts: list[tuple[sp.Expr, sp.Expr]]) -> tuple[dict[sp.Symbol, sp
 def _num(e: sp.Expr) -> complex | None:
     try:
         v = complex(sp.N(e, 30))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, AttributeError):  # AttributeError: booleans have no evalf
         return None
     if v != v or abs(v) == float("inf"):
         return None

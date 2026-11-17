@@ -105,7 +105,12 @@ class ScriptWriter:
             except ValidationError as e:
                 problems = [f"{'.'.join(map(str, er['loc']))}: {er['msg']}" for er in e.errors()][:12]
                 continue
-            rep = verify(script, task, strict=True)
+            try:
+                rep = verify(script, task, strict=True)
+            except Exception as e:  # a gate crash on odd model output must not take down the whole batch
+                problems = [f"verifier crashed on this script ({type(e).__name__}: {e}); "
+                            "write every step as plain SymPy expressions chained with ' = '"]
+                continue
             if rep.ok:
                 dst.write_text(script.model_dump_json(indent=2) + "\n", encoding="utf-8")
                 out.status, out.path, out.errors = "written", str(dst), []

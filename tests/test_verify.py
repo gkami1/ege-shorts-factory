@@ -142,3 +142,32 @@ def test_review_queue_roundtrip(tmp_path):
     (tmp_path / "scripts").mkdir()
     dst = accept("m_profile_07_0001", tmp_path / "review", tmp_path / "scripts")
     assert dst.exists() and not d.exists()
+
+
+def test_python_style_equality_is_a_chain_and_relations_are_rejected():
+    from factory.verify import sym
+
+    assert [str(e) for e in sym.parse_chain("x + 3 == 32")] == ["x + 3", "32"]
+    for bad in ("x > 3", "x <= 3", "True"):
+        with pytest.raises(sym.ParseError):
+            sym.parse_chain(bad)
+
+
+def test_relational_step_is_reported_not_crashed():
+    steps = [(r"2^{x+3} > 0", "2**(x+3) > 0")] + POW_STEPS[1:]
+    rep = verify(pow_script(steps), BANK["m_profile_07_0001"], strict=True)
+    assert not rep.ok and any("not a numeric expression" in e for e in rep.errors)
+
+
+def test_segment_names_and_indices_parse_the_same_in_tex_and_sympy():
+    from factory.verify import sym
+
+    assert sym.parse_sympy("BC / AB") == sym.parse_tex(r"\frac{BC}{AB}") == sp_ratio("BC", "AB")
+    assert sym.parse_sympy("V_2/V_1") == sym.parse_tex(r"\frac{V_{2}}{V_1}")
+    assert sym.parse_sympy("sin(A)") == sym.parse_tex(r"\sin A")  # single letters stay single
+
+
+def sp_ratio(a, b):
+    import sympy as sp
+
+    return sp.Symbol(a) / sp.Symbol(b)

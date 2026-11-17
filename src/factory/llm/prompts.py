@@ -42,17 +42,25 @@ LANGUAGE AND VOICE
 SPANS (they are located on the rendered sheet, so they must be exact)
 - read.given (1–3 items), read.target and substitute.flash are EXACT substrings of the condition, character for
   character. A span is either plain text or contains whole $...$ formulas — never starts or ends inside $...$.
-- Spans must not overlap (the same span may be reused, e.g. flash may equal a given span).
+- Spans must not overlap (the same span may be reused, e.g. flash may equal a given span). So read.target is the
+  short phrase naming what to find («площадь его поверхности»), never a whole sentence that contains a given value.
+- A $...$ formula is highlighted whole, with its $ signs, or not at all: you cannot highlight a part of it.
+  If the condition is one formula to evaluate («Найдите значение выражения $…$»): read.given = [that whole
+  formula with its $ signs], read.target = the words «Найдите значение выражения», substitute.flash = the same
+  formula span as in given.
 
 STEPS (2–6)
 - tex: display LaTeX of the whole expression at this moment, without $. Each step is a small transformation of the
   previous one (it is animated as a morph), keep the structure stable.
 - sympy: the SAME maths in SymPy syntax: explicit *, ** for powers, log(a, base), sqrt(a), pi, angles in radians.
-  An equation or a chain of equalities uses ' = ' (e.g. "x + 3 = 2**5 = 32").
+  An equation or a chain of equalities uses a single ' = ' (e.g. "x + 3 = 2**5 = 32"); never '==', '<', '>'.
   * consecutive single-expression steps must be mathematically equal (identity rewrites);
   * every equality must be true given substitute.values and the answer;
   * the last step must evaluate to the answer after substituting substitute.values (or be "x = <answer>").
-- The sympy and tex of a step must describe exactly the same expression.
+- The sympy and tex of a step must describe exactly the same expression, with the same number of ' = ' parts.
+- Names (the same in tex and sympy): one letter (a, S, t), a Greek name (nu, rho, alpha), an indexed name with an
+  underscore (T_1, v_0; tex T_{1}) or a segment of 2–3 capital letters (AB, BC). Never glue a digit to a letter (T1).
+- If a step names the unknown («S = 6*a**2», «N = nu*t», «BC = AB*sin(A)»), set answer.symbol to that name.
 
 SUBSTITUTE, ANSWER
 - substitute.flash: the span with the given value used at the end; substitute.tex: a short TRUE arithmetic line
@@ -97,7 +105,9 @@ def script_schema(task: Task) -> dict:
         if isinstance(node, dict):
             if "$ref" in node:
                 return inline(defs[node["$ref"].split("/")[-1]])
-            out = {k: inline(v) for k, v in node.items() if k not in ("title", "default")}
+            # drop the "title"/"default" annotations, but not fields that happen to be named so (meta.title)
+            out = {k: ({p: inline(s) for p, s in v.items()} if k == "properties" else inline(v))
+                   for k, v in node.items() if k not in ("title", "default")}
             if "properties" in out:  # every field present (nullable ones may be null): no silent omissions
                 out["required"] = sorted(out["properties"])
             return out

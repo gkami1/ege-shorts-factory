@@ -30,6 +30,26 @@ def test_schema_is_inlined_and_pins_task_id():
     assert set(step["required"]) == {"tex", "narration", "sympy"}
 
 
+def test_schema_keeps_every_model_field():
+    """Fields named like JSON-Schema annotations (meta.title) must survive inlining (2026-11-17 pod run:
+    the grammar forbade meta.title, so every LLM script failed validation)."""
+    from factory.models import VideoScript
+
+    s = prompts.script_schema(BANK["m_profile_07_0001"])
+    meta = s["properties"]["meta"]
+    assert "title" in meta["properties"] and "title" in meta["required"]
+    full = VideoScript.model_json_schema()
+
+    def check(ours, theirs):
+        theirs = full["$defs"][theirs["$ref"].split("/")[-1]] if "$ref" in theirs else theirs
+        if "properties" in theirs:
+            assert set(ours["properties"]) == set(theirs["properties"])
+            for k in theirs["properties"]:
+                check(ours["properties"][k], theirs["properties"][k])
+
+    check(s, full)
+
+
 class FakeClient:
     """Scripted responses: solve answers, then a queue of JSON drafts."""
 
