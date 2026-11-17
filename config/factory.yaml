@@ -79,7 +79,7 @@ assemble:
   loudnorm: true        # -14 LUFS (platform standard)
 
 llm:                    # M3 scriptwriter: any OpenAI-compatible server (vLLM on the pod: tools/llm_serve.sh)
-  base_url: http://localhost:8001/v1
+  base_url: http://localhost:8011/v1   # not 8001: RunPod's nginx proxy listens there
   model: Qwen/Qwen3.6-35B-A3B        # served name; candidates are compared with `factory llm-eval`
   samples: 5            # independent solutions per task (self-consistency)
   min_agreement: 0.6    # share of samples that must give the official answer

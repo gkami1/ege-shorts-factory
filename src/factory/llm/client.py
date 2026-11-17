@@ -53,11 +53,16 @@ class LLMClient:
         raise LLMError("unreachable")
 
     def ready(self) -> bool:
+        """The server answers AND serves our model (a proxy page can answer 200 on a busy port)."""
         try:
             with urllib.request.urlopen(self.base + "/models", timeout=5) as r:
-                return r.status == 200
+                ids = [m.get("id") for m in json.loads(r.read().decode("utf-8")).get("data", [])]
         except Exception:
             return False
+        if self.model not in ids:
+            print(f"[llm] server at {self.base} serves {ids}, not {self.model}")
+            return False
+        return True
 
     def chat(self, messages: list[dict], *, n: int = 1, thinking: bool = True, json_schema: dict | None = None,
              max_tokens: int = 16384, sampling: dict | None = None, seed: int | None = None) -> list[Completion]:

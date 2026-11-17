@@ -135,8 +135,11 @@ def write(
     config: Optional[Path] = typer.Option(None, "--config"),
     kim: Optional[str] = typer.Option(None, "--kim", help="Filter, e.g. math_profile:7"),
     force: bool = typer.Option(False, "--force", help="Overwrite existing scripts"),
+    jobs: int = typer.Option(4, "--jobs", help="Tasks in flight at once (the server batches them)"),
 ):
     """LLM: solve → write → verify. Passing scripts go to video_scripts/, the rest to review/."""
+    from concurrent.futures import ThreadPoolExecutor
+
     from .bank import load_bank
     from .llm.scriptwriter import ScriptWriter
 
@@ -146,11 +149,12 @@ def write(
         typer.echo(f"LLM server not reachable at {cfg['llm']['base_url']} (start it: bash tools/llm_serve.sh)")
         raise typer.Exit(2)
     results = []
-    for t in _pick_tasks(load_bank(cfg["paths"]["tasks"]), task_ids, kim):
-        o = sw.write(t, force=force)
-        results.append(o.__dict__)
-        typer.echo(f"{t.id}: {o.status} ({o.seconds:.0f}s, answers {o.answers}, rounds {o.rounds})"
-                   + (f" → {o.path}" if o.path else "") + "".join(f"\n    ✗ {e}" for e in o.errors[:5]))
+    tasks = _pick_tasks(load_bank(cfg["paths"]["tasks"]), task_ids, kim)
+    with ThreadPoolExecutor(max(1, jobs)) as pool:
+        for t, o in pool.map(lambda t: (t, sw.write(t, force=force)), tasks):
+            results.append(o.__dict__)
+            typer.echo(f"{t.id}: {o.status} ({o.seconds:.0f}s, answers {o.answers}, rounds {o.rounds})"
+                       + (f" → {o.path}" if o.path else "") + "".join(f"\n    ✗ {e}" for e in o.errors[:5]))
     summary = {s: sum(r["status"] == s for r in results) for s in ("written", "review", "unsolved", "exists", "error")}
     typer.echo(f"summary: {summary}")
     rep = cfg["paths"]["work"] / "llm" / f"write_{time_stamp()}.json"
@@ -164,9 +168,11 @@ def write(
 def llm_eval(
     config: Optional[Path] = typer.Option(None, "--config"),
     n: int = typer.Option(5, "--n", help="Samples per task"),
+    jobs: int = typer.Option(4, "--jobs", help="Tasks in flight at once (the server batches them)"),
 ):
     """Solve every bank task N times → accuracy, agreement and speed of the served model."""
     import time as _t
+    from concurrent.futures import ThreadPoolExecutor
 
     from .bank import load_bank
     from .llm.scriptwriter import ScriptWriter
@@ -179,20 +185,27 @@ def llm_eval(
         typer.echo(f"LLM server not reachable at {cfg['llm']['base_url']}")
         raise typer.Exit(2)
     rows, t_all = [], _t.perf_counter()
-    for t in load_bank(cfg["paths"]["tasks"]).values():
+
+    def solve(t):
         t0 = _t.perf_counter()
         answers, _ = sw.solve(t, n)
-        ok, maj, counts = agreement(answers, t.answer, float(cfg["llm"].get("min_agreement", 0.6)))
-        acc = sum(bool(a) and answers_equal(a, t.answer) for a in answers) / max(1, len(answers))
-        rows.append({"task": t.id, "accuracy": acc, "majority_ok": ok, "counts": counts, "s": round(_t.perf_counter() - t0)})
-        typer.echo(f"{t.id}: {acc:.0%} correct, majority {'OK' if ok else 'WRONG'} {counts} ({rows[-1]['s']}s)")
+        return t, answers, _t.perf_counter() - t0
+
+    with ThreadPoolExecutor(max(1, jobs)) as pool:
+        for t, answers, sec in pool.map(solve, load_bank(cfg["paths"]["tasks"]).values()):
+            ok, maj, counts = agreement(answers, t.answer, float(cfg["llm"].get("min_agreement", 0.6)))
+            acc = sum(bool(a) and answers_equal(a, t.answer) for a in answers) / max(1, len(answers))
+            rows.append({"task": t.id, "accuracy": acc, "majority_ok": ok, "counts": counts, "s": round(sec)})
+            typer.echo(f"{t.id}: {acc:.0%} correct, majority {'OK' if ok else 'WRONG'} {counts} ({rows[-1]['s']}s)")
     mean = sum(r["accuracy"] for r in rows) / max(1, len(rows))
     maj = sum(r["majority_ok"] for r in rows)
     typer.echo(f"{cfg['llm']['model']}: sample accuracy {mean:.0%}, majority correct {maj}/{len(rows)}, "
                f"{_t.perf_counter() - t_all:.0f}s total")
     out = cfg["paths"]["work"] / "llm" / f"eval_{cfg['llm']['model'].replace('/', '_')}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"model": cfg["llm"]["model"], "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
+    out.write_text(json.dumps({"model": cfg["llm"]["model"], "samples": n, "jobs": jobs, "accuracy": mean, "majority_ok": maj,
+                               "total_s": round(_t.perf_counter() - t_all), "rows": rows},
+                              ensure_ascii=False, indent=1), encoding="utf-8")
     _hard_exit(0)
 
 
