@@ -39,6 +39,22 @@ bash tools/pod_smoke.sh            # tests, one spoken line, one full video with
 
 The first run downloads Qwen3-TTS (~4 GB per model) and whisper large-v3 (~3 GB) into `/workspace/cache`.
 
+**After a container restart on a network volume:** the volume doesn't keep symlinks, so every
+`/workspace/cache/hf/hub/*/snapshots/*` file comes back as 0 bytes (the weights in `blobs/` are intact; vLLM then
+fails with "config.json is not a valid JSON file"). Rebuild the links on the container disk and point HF there:
+
+```bash
+/opt/vllm-venv/bin/python tools/hf_relink.py /workspace/cache/hf/hub /root/hf/hub   # any venv with huggingface_hub
+sed -i 's#HF_HOME=/workspace/cache/hf#HF_HOME=/root/hf#' /workspace/factory.env
+```
+
+The narrator reference `assets/voices/narrator_ru.*` is gitignored, so it is lost with the container too:
+keep a copy in `/workspace/voices/` or re-run `factory voice-import`.
+
+**Long batches:** GPU memory grows inside one `factory batch` process (after ~8 shorts, CUDA OOM on a 48 GB card).
+Build one short per process: `for f in video_scripts/*.json; do factory batch "$f" --config config/pod.yaml; done`.
+Never run two builds on one GPU at once.
+
 ## 4. Design the narrator voice (once)
 
 ```bash

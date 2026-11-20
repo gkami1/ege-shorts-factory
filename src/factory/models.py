@@ -7,6 +7,7 @@ constrained to in M3 (vLLM structured outputs / llama.cpp json-schema grammar).
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Literal
 
@@ -183,12 +184,57 @@ def expand_ellipsis(condition: str, span: str) -> str:
         return span
     return condition[start:pos + len(pieces[-1])]
 
+_NAMED_VALUE = re.compile(r"\$\s*[A-Za-z][A-Za-z_{}\\]*\s*=\s*")   # '$m=0{,}5$ кг' → '$0{,}5$ кг'
+
+
+def _fuzzy_span(condition: str, span: str, min_ratio: float = 0.85) -> str | None:
+    """The condition phrase (whole words) closest to `span`, if it is a near copy: an inflection changed
+    ('скорости' for 'скорость') or a word added/dropped. None when nothing is close enough."""
+    import difflib
+
+    starts = [0] + [m.end() for m in re.finditer(r"\s+", condition)]
+    ends = [m.start() for m in re.finditer(r"\s+", condition)] + [len(condition)]
+    lo, hi = 0.7 * len(span), 1.3 * len(span)
+    best, best_r = None, min_ratio
+    for a in starts:
+        for b in ends:
+            if b <= a or not lo <= b - a <= hi:
+                continue
+            cand = condition[a:b].rstrip(".,;:?!")
+            r = difflib.SequenceMatcher(None, span, cand, autojunk=False).ratio()
+            if r > best_r and check_span(condition, cand) is None:
+                best, best_r = cand, r
+    return best
+
+
+def snap_span(condition: str, span: str) -> str:
+    """LLM span → exact condition text: '...' expanded, '$m=0{,}5$' → '$0{,}5$', near copies snapped."""
+    if condition.find(span) >= 0:
+        return span
+    for fix in (lambda s: expand_ellipsis(condition, s), lambda s: _NAMED_VALUE.sub("$", s)):
+        s = fix(span)
+        if s != span and condition.find(s) >= 0:
+            return s
+    return _fuzzy_span(condition, span) or span
+
+
 def fix_spans(script: VideoScript, task: Task) -> None:
     """Deterministic span repairs applied to LLM output before the gate (in place)."""
-    r = script.read
-    r.given = [expand_ellipsis(task.condition, g) for g in r.given]
-    r.target = expand_ellipsis(task.condition, r.target)
-    script.substitute.flash = expand_ellipsis(task.condition, script.substitute.flash)
+    c, r = task.condition, script.read
+    r.given = [snap_span(c, g) for g in r.given]
+    r.target = snap_span(c, r.target)
+    # target containing a given ('… в момент $t = 2$ с' with given '$t = 2$'): end the target before it
+    t0 = c.find(r.target)
+    for g in r.given:
+        g0 = c.find(g, t0) if t0 >= 0 else -1
+        if g != r.target and t0 >= 0 and t0 < g0 < t0 + len(r.target) and g0 + len(g) <= t0 + len(r.target):
+            cut = c[t0:g0].rstrip()
+            if cut and check_span(c, cut) is None:
+                r.target = cut
+    flash = snap_span(c, script.substitute.flash)
+    if c.find(flash) < 0 and r.given and c.find(r.given[0]) >= 0:
+        flash = r.given[0]   # flashing an intermediate value (not in the condition): flash the given instead
+    script.substitute.flash = flash
 
 def script_errors(script: VideoScript, task: Task) -> list[str]:
     """Structural checks of a script against its task (first stage of the verification gate)."""

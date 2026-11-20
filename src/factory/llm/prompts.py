@@ -37,6 +37,8 @@ LANGUAGE AND VOICE
 - Narration is read by TTS. Write numbers as WORDS whenever grammatical case matters («равно десяти», «из восьми»);
   digits are read in the nominative case only. Avoid abbreviations except «ЕГЭ». Prefer words for formulas
   («два в степени икс плюс три»); simple formulas may be written inside $...$.
+- Decimals are said the Russian way: «ноль целых шесть десятых», «ноль целых пятьсот двенадцать тысячных» (or
+  digits «0,6», read in the nominative). Never «точка шесть».
 - One beat = one sentence or two. Each step's narration explains WHY that transformation is made.
 
 SPANS (they are located on the rendered sheet, so they must be exact)
@@ -56,7 +58,8 @@ STEPS (2–6)
   An equation or a chain of equalities uses a single ' = ' (e.g. "x + 3 = 2**5 = 32"); never '==', '<', '>'.
   * consecutive single-expression steps must be mathematically equal (identity rewrites);
   * every equality must be true given substitute.values and the answer;
-  * the last step must evaluate to the answer after substituting substitute.values (or be "x = <answer>").
+  * the last step must evaluate to the answer after substituting substitute.values (or be "x = <answer>"):
+    never stop at an intermediate (v**2 = 256 → add the step v = 16; a discriminant → finish to the answer).
 - The sympy and tex of a step must describe exactly the same expression, with the same number of ' = ' parts.
 - Names (the same in tex and sympy): one letter (a, S, t), a Greek name (nu, rho, alpha), an indexed name with an
   underscore (T_1, v_0; tex T_{1}) or a segment of 2–3 capital letters (AB, BC). Never glue a digit to a letter (T1).

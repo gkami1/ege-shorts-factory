@@ -211,3 +211,99 @@ def test_ellipsis_span_expands_to_exact_text():
     assert got == "вероятность того, что в случайно выбранном на экзамене билете не будет вопроса о кислотах"
     assert expand_ellipsis(cond, "найти вероятность … кислотах") == "найти вероятность … кислотах"  # no exact piece
     assert expand_ellipsis(cond, "20 билетов") == "20 билетов"
+
+
+# ---- 2026-11-20 pod run: gate false positives and deterministic span repairs
+
+
+def test_tex_label_absent_from_machine_form_is_allowed():
+    rep = verify(prob_script([(r"P = 0{,}8 \cdot 0{,}8 \cdot 0{,}8", "0.8 * 0.8 * 0.8"),
+                              (r"P = 0{,}64 \cdot 0{,}8", "0.64 * 0.8"), (r"P = 0{,}512", "0.512")]),
+                 BANK["m_profile_05_0001"], strict=True)
+    assert rep.ok, rep.text()
+
+
+def test_tex_label_still_cross_checks_the_value():
+    rep = verify(prob_script([(r"P = 0{,}8 \cdot 0{,}8 \cdot 0{,}8", "0.8 * 0.8 * 0.8"),
+                              (r"P = 0{,}64 \cdot 0{,}9", "0.64 * 0.8"), (r"P = 0{,}512", "0.512")]),
+                 BANK["m_profile_05_0001"], strict=True)
+    assert any("tex shows" in e for e in rep.errors)
+
+
+def complement_script(second_label):
+    return script("m_profile_04_0001", [(r"P(A) = \frac{7}{20}", "7/20"), (second_label + r" = 1 - \frac{7}{20}", "1 - 7/20")],
+                  "0,65", flash="в 7 из них", given=["всего 20 билетов", "в 7 из них"],
+                  target="не будет вопроса о кислотах", narration="Ответ: ноль целых шестьдесят пять сотых!")
+
+
+def test_consecutive_steps_naming_different_quantities_are_not_forced_equal():
+    rep = verify(complement_script(r"P(B)"), BANK["m_profile_04_0001"], strict=True)
+    assert rep.ok, rep.text()
+    rep = verify(complement_script(r"P(A)"), BANK["m_profile_04_0001"], strict=True)   # same name: must be equal
+    assert any("steps 0→1" in e for e in rep.errors)
+
+
+def ke_script(law_sympy, values):
+    return script("p_03_0001", [(r"E_k = \frac{m v^2}{2}", law_sympy), (r"E_k = \frac{2 \cdot 3^2}{2}", "E_k = 2*3**2/2")],
+                  "9", flash="$3$ м/с", given=["$2$ кг", "$3$ м/с"], target="кинетическая энергия",
+                  values=values, symbol="E_k", unit="Дж", narration="Ответ: девять джоулей!")
+
+
+def test_physics_law_with_an_unlisted_quantity_is_taken_as_a_relation():
+    rep = verify(ke_script("E_k = m*v**2/2", {"v": "3"}), BANK["p_03_0001"], strict=True)
+    assert rep.ok, rep.text()
+    assert any("taken as a law" in w for w in rep.warnings)
+
+
+def test_physics_law_cannot_contradict_the_facts():
+    rep = verify(ke_script("E_k = m*v**2/2", {"v": "3", "m": "3"}), BANK["p_03_0001"], strict=True)
+    assert any("step 0" in e and "false" in e for e in rep.errors)
+
+
+def test_math_identity_is_never_relaxed_into_a_relation():
+    steps = [(r"(a+b)^2", "(a+b)**2"), (r"a^2 + b^2", "a**2 + b**2"), (r"a^2 + b^2", "a**2 + b**2")]
+    rep = verify(pow_script(steps), BANK["m_profile_07_0001"])
+    assert any("steps 0→1" in e for e in rep.errors)
+
+
+def test_tex_equation_ending_in_zero_is_checked():
+    base = [(r"y' = 3x^2 - 27", "3*x**2 - 27"), (r"3(x-3)(x+3) = 0", "3*(x-3)*(x+3)"),
+            (r"y(3) = 3^3 - 27\cdot 3 + 10", "3**3 - 27*3 + 10")]
+    t = BANK["m_profile_12_0001"]
+    kw = dict(flash=t.condition.split("$")[1].join("$$"), given=[t.condition.split("$")[1].join("$$")],
+              target="наименьшее значение", narration="Ответ: минус сорок четыре!")
+    rep = verify(script(t.id, base, "-44", values={"x": "3"}, **kw), t, strict=True)
+    assert not [e for e in rep.errors if e.startswith("step")], rep.text()
+    rep = verify(script(t.id, base, "-44", values={"x": "2"}, **kw), t, strict=True)
+    assert any("= 0, which is false" in e for e in rep.errors)
+
+
+def test_snap_span_repairs_near_copies():
+    from factory.models import snap_span
+
+    c = BANK["p_03_0002"].condition
+    assert snap_span(c, "$m=0{,}5$ кг") == "$0{,}5$ кг"
+    c = BANK["m_profile_10_0001"].condition
+    assert snap_span(c, "скорости течения равна 1 км/ч") == "скорость течения равна 1 км/ч"
+    assert snap_span(c, "совсем другая фраза про поезд") == "совсем другая фраза про поезд"   # left for the gate
+
+
+def test_target_containing_a_given_is_cut_before_it():
+    from factory.models import fix_spans
+
+    t = BANK["p_01_0001"]
+    s = script(t.id, [("v = 2 + 6t", "2 + 6*t"), ("v = 14", "14")], "14", flash="$t = 2$",
+               given=["$x(t) = 5 + 2t + 3t^2$", "$t = 2$"],
+               target="проекция скорости тела на ось $Ox$ в момент времени $t = 2$ с", values={"t": "2"},
+               unit="м/с", narration="Ответ: четырнадцать!")
+    fix_spans(s, t)
+    assert s.read.target == "проекция скорости тела на ось $Ox$ в момент"
+    assert verify(s, t, strict=True).ok
+
+
+def test_english_style_decimal_narration_is_rejected():
+    s = prob_script([(r"P = 0{,}8^{3}", "P = 0.8**3"), (r"P = 0{,}512", "P = 0.512")])
+    s.steps[0].narration = "Точка восемь в кубе."
+    assert any("точка" in e.lower() for e in verify(s, BANK["m_profile_05_0001"], strict=True).errors)
+    s.steps[0].narration = "Подставляем подходящую точку три. В точке три функция меньше."
+    assert verify(s, BANK["m_profile_05_0001"], strict=True).ok
